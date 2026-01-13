@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "NW.js based SDK, with Svelte, Vite, SCSS and custom nw-builder integration",
   "main": "index.js",
+  "exports": {
+    "./eslint-rules": "./eslint-rules/index.js"
+  },
   "bin": {
     "create-sveltium": "index.js"
   },
@@ -12,5 +15,14 @@
   "keywords": [],
   "author": "Oosuke Ren",
   "license": "Apache-2.0",
-  "packageManager": "pnpm@10.27.0"
+  "packageManager": "pnpm@10.27.0",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "nw-builder": "^4.17.0",
+    "svelte": "^5.46.3",
+    "vite": "^7.3.1"
+  }
 }
