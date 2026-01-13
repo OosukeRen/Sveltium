@@ -1,0 +1,8 @@
+{
+  "name": "@sveltium/types-generator",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "generate": "node generate-nw-types.js"
+  }
+}

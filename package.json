@@ -4,6 +4,7 @@
   "description": "NW.js based SDK, with Svelte, Vite, SCSS and custom nw-builder integration",
   "main": "index.js",
   "exports": {
+    "./svelte-polyfills": "./svelte-polyfills/index.js",
     "./eslint-rules": "./eslint-rules/index.js"
   },
   "bin": {
