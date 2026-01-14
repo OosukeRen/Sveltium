@@ -21,7 +21,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OosukeRen/Sveltium",
+    "url": "git+https://github.com/OosukeRen/Sveltium.git",
     "directory": "packages/svelte-polyfills"
   }
 }
