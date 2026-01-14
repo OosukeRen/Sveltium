@@ -1,0 +1,29 @@
+{
+  "name": "@sveltium/build-tools",
+  "version": "0.1.0",
+  "description": "Build and packaging tools for Sveltium NW.js applications",
+  "type": "module",
+  "main": "./package.js",
+  "exports": "./package.js",
+  "bin": {
+    "sveltium-build": "./package.js"
+  },
+  "files": [
+    "package.js"
+  ],
+  "keywords": [
+    "sveltium",
+    "nwjs",
+    "build",
+    "package"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OosukeRen/Sveltium",
+    "directory": "packages/build-tools"
+  },
+  "dependencies": {
+    "nw-builder": "^4.0.0"
+  }
+}

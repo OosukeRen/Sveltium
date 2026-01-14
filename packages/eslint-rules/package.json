@@ -1,8 +1,27 @@
 {
   "name": "@sveltium/eslint-rules",
   "version": "0.1.0",
+  "description": "Custom ESLint rules for Sveltium projects",
   "type": "module",
   "main": "./index.js",
   "exports": "./index.js",
-  "files": ["index.js", "rules/**"]
+  "files": [
+    "index.js",
+    "rules"
+  ],
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "sveltium",
+    "code-style"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OosukeRen/Sveltium",
+    "directory": "packages/eslint-rules"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.0.0"
+  }
 }

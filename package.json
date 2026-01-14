@@ -1,7 +1,7 @@
 {
   "name": "sveltium",
   "version": "1.0.0",
-  "description": "NW.js based SDK, with Svelte, Vite, SCSS and custom nw-builder integration",
+  "description": "Svelte + Chromium (NW.js based SDK), building upon Svelte, Vite, SCSS and custom nw-builder integration",
   "main": "index.js",
   "exports": {
     "./svelte-polyfills": "./svelte-polyfills/index.js",

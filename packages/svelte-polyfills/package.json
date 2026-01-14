@@ -1,8 +1,27 @@
 {
-  "name": "@sveltium/svelte-polyfills",
+  "name": "@sveltium/polyfills",
   "version": "0.1.0",
+  "description": "DOM and Proxy polyfills for legacy browser support in Sveltium apps",
   "type": "module",
   "main": "./index.js",
   "exports": "./index.js",
-  "files": ["index.js", "rules/**"]
+  "files": [
+    "index.js",
+    "dom.js",
+    "proxy.min.js"
+  ],
+  "keywords": [
+    "polyfill",
+    "svelte",
+    "dom",
+    "proxy",
+    "legacy",
+    "nwjs"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OosukeRen/Sveltium",
+    "directory": "packages/svelte-polyfills"
+  }
 }
