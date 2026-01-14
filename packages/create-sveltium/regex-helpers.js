@@ -1,13 +1,8 @@
-import VerEx from 'verbal-expressions'
-
 // ============================================================================
 // Trailing Slashes Pattern
 // Matches one or more forward slashes at the end of a string
 // ============================================================================
-const trailingSlashesPattern = VerEx()
-  .find('/')
-  .oneOrMore()
-  .endOfLine()
+const trailingSlashesPattern = /\/+$/
 
 export const removeTrailingSlashes = (str) => {
   return str.replace(trailingSlashesPattern, '')
@@ -17,22 +12,17 @@ export const removeTrailingSlashes = (str) => {
 // Whitespace Pattern
 // Matches one or more whitespace characters
 // ============================================================================
-const whitespacePattern = VerEx()
-  .whitespace()
-  .oneOrMore()
+const whitespacePattern = /\s+/g
 
 export const replaceWhitespace = (str, replacement = '-') => {
-  const globalPattern = new RegExp(whitespacePattern.source, 'g')
-  return str.replace(globalPattern, replacement)
+  return str.replace(whitespacePattern, replacement)
 }
 
 // ============================================================================
 // Leading Dot or Underscore Pattern
 // Matches a dot or underscore at the start of a string
 // ============================================================================
-const leadingDotOrUnderscorePattern = VerEx()
-  .startOfLine()
-  .anyOf('._')
+const leadingDotOrUnderscorePattern = /^[._]/
 
 export const removeLeadingDotOrUnderscore = (str) => {
   return str.replace(leadingDotOrUnderscorePattern, '')
@@ -42,33 +32,24 @@ export const removeLeadingDotOrUnderscore = (str) => {
 // Valid Package Name Characters Pattern
 // Matches valid npm package name characters: a-z, 0-9, dash, tilde
 // ============================================================================
-const validPackageChars = VerEx()
-  .range('a', 'z')
-  .or()
-  .range('0', '9')
-  .or()
-  .anyOf('-~')
+const validPackageCharPattern = /^[a-z0-9\-~]$/
 
-// For invalid chars, we need to negate - VerEx doesn't support [^...] directly
-// So we filter by keeping only valid characters
 export const removeInvalidPackageChars = (str, replacement = '-') => {
   let result = ''
-  let invalidRun = ''
+  let hasInvalidRun = false
 
   for (const char of str) {
-    if (validPackageChars.test(char)) {
-      if (invalidRun.length > 0) {
+    const isValid = validPackageCharPattern.test(char)
+
+    if (isValid) {
+      if (hasInvalidRun) {
         result += replacement
-        invalidRun = ''
+        hasInvalidRun = false
       }
       result += char
     } else {
-      invalidRun += char
+      hasInvalidRun = true
     }
-  }
-
-  if (invalidRun.length > 0) {
-    result += replacement
   }
 
   return result
@@ -80,16 +61,16 @@ export const removeInvalidPackageChars = (str, replacement = '-') => {
 // Supports scoped packages: @scope/package-name
 // ============================================================================
 
-// Scope part: @[a-z0-9-*~][a-z0-9-*._~]*/
-const scopeFirstChar = VerEx().range('a', 'z').or().range('0', '9').or().anyOf('-*~')
-const scopeRestChars = VerEx().range('a', 'z').or().range('0', '9').or().anyOf('-*._~')
-
-// Package name part: [a-z0-9-~][a-z0-9-._~]*
-const packageFirstChar = VerEx().range('a', 'z').or().range('0', '9').or().anyOf('-~')
-const packageRestChars = VerEx().range('a', 'z').or().range('0', '9').or().anyOf('-._~')
+// First char patterns (more restrictive)
+const scopeFirstCharPattern = /^[a-z0-9\-*~]$/
+const scopeRestCharPattern = /^[a-z0-9\-*._~]$/
+const packageFirstCharPattern = /^[a-z0-9\-~]$/
+const packageRestCharPattern = /^[a-z0-9\-._~]$/
 
 export const isValidPackageName = (name) => {
-  if (!name || name.length === 0) return false
+  if (!name || name.length === 0) {
+    return false
+  }
 
   let remaining = name
 
@@ -98,25 +79,45 @@ export const isValidPackageName = (name) => {
     remaining = remaining.slice(1)
     const slashIndex = remaining.indexOf('/')
 
-    if (slashIndex === -1) return false
+    if (slashIndex === -1) {
+      return false
+    }
 
     const scope = remaining.slice(0, slashIndex)
     remaining = remaining.slice(slashIndex + 1)
 
-    if (scope.length === 0) return false
-    if (!scopeFirstChar.test(scope[0])) return false
+    if (scope.length === 0) {
+      return false
+    }
+
+    const scopeFirstCharValid = scopeFirstCharPattern.test(scope[0])
+    if (!scopeFirstCharValid) {
+      return false
+    }
 
     for (const char of scope.slice(1)) {
-      if (!scopeRestChars.test(char)) return false
+      const charValid = scopeRestCharPattern.test(char)
+      if (!charValid) {
+        return false
+      }
     }
   }
 
   // Validate package name part
-  if (remaining.length === 0) return false
-  if (!packageFirstChar.test(remaining[0])) return false
+  if (remaining.length === 0) {
+    return false
+  }
+
+  const firstCharValid = packageFirstCharPattern.test(remaining[0])
+  if (!firstCharValid) {
+    return false
+  }
 
   for (const char of remaining.slice(1)) {
-    if (!packageRestChars.test(char)) return false
+    const charValid = packageRestCharPattern.test(char)
+    if (!charValid) {
+      return false
+    }
   }
 
   return true

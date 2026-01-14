@@ -1,14 +1,36 @@
 {
-  "name": "create-sveltium",
+  "name": "@sveltium/create",
   "version": "1.0.0",
+  "description": "CLI tool to scaffold Sveltium projects with NW.js, Svelte, and Vite",
   "type": "module",
   "bin": {
     "create-sveltium": "index.js"
   },
-  "devDependencies": {
+  "files": [
+    "index.js",
+    "questions.js",
+    "regex-helpers.js",
+    "scaffolding",
+    "utils"
+  ],
+  "keywords": [
+    "svelte",
+    "sveltium",
+    "nwjs",
+    "vite",
+    "scaffold",
+    "create",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OosukeRen/Sveltium",
+    "directory": "packages/create-sveltium"
+  },
+  "dependencies": {
     "@clack/prompts": "^0.9.1",
     "fs-extra": "^11.1.1",
-    "picocolors": "^1.1.1",
-    "verbal-expressions": "^1.0.2"
+    "picocolors": "^1.1.1"
   }
 }
