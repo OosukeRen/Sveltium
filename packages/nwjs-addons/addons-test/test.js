@@ -78,6 +78,7 @@ function init() {
     { name: 'ipc', obj: addons.ipc },
     { name: 'callDll', obj: addons.callDll },
     { name: 'csvParser', obj: addons.csvParser },
+    { name: 'rssParser', obj: addons.rssParser },
     { name: 'tinycc', obj: addons.tinycc, check: function() { return addons.tinycc && addons.tinycc.isAvailable(); } },
     { name: 'sqlite3', obj: addons.sqlite3, check: function() { return addons.sqlite3 && addons.sqlite3.isAvailable(); } }
   ];
@@ -690,6 +691,28 @@ function csvRoundTrip() {
   } catch (err) {
     log('CSV round-trip failed: ' + err.message, 'error');
     setOutput('csv-output', 'Error: ' + err.message);
+  }
+}
+
+// ============================================
+// RSS Parser Tests
+// ============================================
+
+function rssParse() {
+  if (!addons.rssParser) {
+    log('RSS Parser addon not available', 'error');
+    return;
+  }
+
+  try {
+    var xmlText = document.getElementById('rss-input').value;
+    var feed = addons.rssParser.parse(xmlText);
+
+    log('RSS: Parsed feed with ' + feed.items.length + ' items', 'success');
+    setOutput('rss-output', JSON.stringify(feed, null, 2));
+  } catch (err) {
+    log('RSS parse failed: ' + err.message, 'error');
+    setOutput('rss-output', 'Error: ' + err.message);
   }
 }
 

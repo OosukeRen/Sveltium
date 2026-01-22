@@ -118,6 +118,43 @@ Bob,25,Los Angeles
     <div class="output" id="csv-output"></div>
   </section>
 
+  <!-- RSS Parser Tests -->
+  <section class="test-section">
+    <h2>RSS Parser</h2>
+    <div class="test-row">
+      <textarea id="rss-input" rows="8" placeholder="RSS/Atom XML..."><?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Sample RSS Feed</title>
+    <link>https://example.com</link>
+    <description>A sample RSS feed for testing</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 01 Jan 2024 12:00:00 GMT</lastBuildDate>
+    <item>
+      <title>First Article</title>
+      <link>https://example.com/article1</link>
+      <description>This is the first article description.</description>
+      <pubDate>Mon, 01 Jan 2024 10:00:00 GMT</pubDate>
+      <author>author@example.com</author>
+      <category>Technology</category>
+    </item>
+    <item>
+      <title>Second Article</title>
+      <link>https://example.com/article2</link>
+      <description><![CDATA[<p>HTML content in CDATA</p>]]></description>
+      <pubDate>Mon, 01 Jan 2024 11:00:00 GMT</pubDate>
+      <category>News</category>
+      <category>Updates</category>
+    </item>
+  </channel>
+</rss></textarea>
+    </div>
+    <div class="test-row">
+      <button onclick="rssParse()">Parse RSS</button>
+    </div>
+    <div class="output" id="rss-output"></div>
+  </section>
+
   <!-- SQLite3 Tests -->
   <section class="test-section">
     <h2>SQLite3</h2>
