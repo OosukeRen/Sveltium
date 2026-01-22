@@ -18,6 +18,7 @@ var clipboard = require('./clipboard')
 var folderDialog = require('./folder-dialog')
 var ipc = require('./ipc')
 var callDll = require('./call-dll')
+var csvParser = require('./csv-parser')
 
 // Optional addons - may not be available
 var tinycc = null
@@ -41,5 +42,6 @@ module.exports = {
   ipc: ipc,
   callDll: callDll,
   tinycc: tinycc,
-  sqlite3: sqlite3
+  sqlite3: sqlite3,
+  csvParser: csvParser
 }

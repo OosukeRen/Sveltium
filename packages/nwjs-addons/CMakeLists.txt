@@ -60,6 +60,10 @@ file(GLOB SQLITE3_CPP_SRC "nw-sqlite3/src/*.cpp")
 list(APPEND SOURCES ${SQLITE_SRC} ${SQLITE3_CPP_SRC})
 include_directories("nw-sqlite3/src")
 
+# CSV Parser addon
+file(GLOB CSVPARSER_SRC "csv-parser/src/*.cpp")
+list(APPEND SOURCES ${CSVPARSER_SRC})
+
 # Single combined addon
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 

@@ -10,7 +10,8 @@
     "./ipc": "./ipc/index.js",
     "./nw-sqlite3": "./nw-sqlite3/index.js",
     "./tinycc": "./tinycc/index.js",
-    "./call-dll": "./call-dll/index.js"
+    "./call-dll": "./call-dll/index.js",
+    "./csv-parser": "./csv-parser/index.js"
   },
   "files": [
     "index.js",
@@ -20,6 +21,7 @@
     "nw-sqlite3",
     "tinycc",
     "call-dll",
+    "csv-parser",
     "build"
   ],
   "scripts": {
@@ -40,6 +42,8 @@
     "tinycc",
     "ffi",
     "dll",
+    "csv",
+    "csv-parser",
     "windows-xp"
   ],
   "license": "MIT",
