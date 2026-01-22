@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>NW.js Addons Test</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>NW.js Addons Test Suite</h1>
+
+  <div id="status-bar">
+    <span id="addon-status">Loading addons...</span>
+  </div>
+
+  <!-- Addon Status -->
+  <section class="test-section">
+    <h2>Addon Availability</h2>
+    <div id="addon-list" class="addon-grid"></div>
+  </section>
+
+  <!-- Clipboard Tests -->
+  <section class="test-section">
+    <h2>Clipboard</h2>
+    <div class="test-row">
+      <input type="text" id="clipboard-text" placeholder="Text to copy..." value="Hello from NW.js!">
+      <button onclick="clipboardCopyText()">Copy Text</button>
+      <button onclick="clipboardPasteText()">Paste Text</button>
+    </div>
+    <div class="test-row">
+      <button onclick="clipboardGetFormats()">Get Formats</button>
+      <button onclick="clipboardClear()">Clear Clipboard</button>
+    </div>
+    <div class="output" id="clipboard-output"></div>
+  </section>
+
+  <!-- Folder Dialog Tests -->
+  <section class="test-section">
+    <h2>Folder Dialog</h2>
+    <div class="test-row">
+      <button onclick="folderDialogOpen()">Open Folder Dialog</button>
+      <button onclick="folderDialogOpenWithTitle()">Open with Title</button>
+    </div>
+    <div class="output" id="folder-output"></div>
+  </section>
+
+  <!-- IPC Tests -->
+  <section class="test-section">
+    <h2>IPC (Named Pipes)</h2>
+    <div class="test-row">
+      <input type="text" id="ipc-pipe-name" placeholder="Pipe name" value="test-pipe">
+      <button onclick="ipcCreateServer()">Create Server</button>
+      <button onclick="ipcConnect()">Connect Client</button>
+    </div>
+    <div class="test-row">
+      <input type="text" id="ipc-message" placeholder="Message to send" value="Hello via IPC!">
+      <button onclick="ipcSend()">Send Message</button>
+      <button onclick="ipcClose()">Close</button>
+    </div>
+    <div class="output" id="ipc-output"></div>
+  </section>
+
+  <!-- Call-DLL Tests -->
+  <section class="test-section">
+    <h2>Call-DLL (FFI)</h2>
+    <div class="test-row">
+      <button onclick="callDllMessageBox()">MessageBox (user32)</button>
+      <button onclick="callDllGetTickCount()">GetTickCount (kernel32)</button>
+      <button onclick="callDllBeep()">Beep (kernel32)</button>
+    </div>
+    <div class="output" id="calldll-output"></div>
+  </section>
+
+  <!-- TinyCC Tests -->
+  <section class="test-section">
+    <h2>TinyCC (Runtime C Compiler)</h2>
+    <div class="test-row">
+      <button onclick="tinyccSimple()">Compile Simple Function</button>
+      <button onclick="tinyccMath()">Compile Math Functions</button>
+    </div>
+    <div class="test-row">
+      <textarea id="tinycc-code" rows="8" placeholder="C code to compile...">// Plain C - use getFunction(name, returnType, argTypes)
+int add(int a, int b) {
+  return a + b;
+}
+
+int multiply(int a, int b) {
+  return a * b;
+}</textarea>
+    </div>
+    <div class="test-row">
+      <button onclick="tinyccCompileCustom()">Compile Custom Code</button>
+      <button onclick="tinyccCallFunction()">Call Function</button>
+      <input type="text" id="tinycc-func-name" placeholder="Function name" value="add">
+      <input type="text" id="tinycc-args" placeholder="Args (comma separated)" value="5, 3">
+    </div>
+    <div class="output" id="tinycc-output"></div>
+  </section>
+
+  <!-- SQLite3 Tests -->
+  <section class="test-section">
+    <h2>SQLite3</h2>
+    <div class="test-row">
+      <button onclick="sqlite3Open()">Open In-Memory DB</button>
+      <button onclick="sqlite3OpenFile()">Open File DB</button>
+      <button onclick="sqlite3Close()">Close DB</button>
+    </div>
+    <div class="test-row">
+      <textarea id="sqlite3-sql" rows="3" placeholder="SQL to execute...">CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER);
+INSERT INTO users (name, age) VALUES ('Alice', 30), ('Bob', 25);
+SELECT * FROM users;</textarea>
+    </div>
+    <div class="test-row">
+      <button onclick="sqlite3Exec()">Execute SQL</button>
+      <button onclick="sqlite3Query()">Query (SELECT)</button>
+      <button onclick="sqlite3Benchmark()">Benchmark (1000 inserts)</button>
+    </div>
+    <div class="output" id="sqlite3-output"></div>
+  </section>
+
+  <!-- Console Output -->
+  <section class="test-section">
+    <h2>Console Log</h2>
+    <div id="console-output" class="console"></div>
+    <button onclick="clearConsole()">Clear Console</button>
+  </section>
+
+  <script src="test.js"></script>
+</body>
+</html>
