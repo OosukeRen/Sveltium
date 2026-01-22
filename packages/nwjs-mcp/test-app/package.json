@@ -1,0 +1,11 @@
+{
+  "name": "nwjs-mcp-test",
+  "version": "1.0.0",
+  "main": "index.html",
+  "window": {
+    "width": 800,
+    "height": 600,
+    "title": "NW.js MCP Test App"
+  },
+  "node-remote": "<all_urls>"
+}

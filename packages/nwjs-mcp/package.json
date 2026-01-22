@@ -1,0 +1,46 @@
+{
+  "name": "@sveltium/nwjs-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for NW.js application testing and automation",
+  "main": "src/client/index.js",
+  "type": "commonjs",
+  "bin": {
+    "nwjs-mcp": "./src/server/index.js"
+  },
+  "exports": {
+    ".": "./src/client/index.js",
+    "./client": "./src/client/index.js",
+    "./server": "./src/server/index.js"
+  },
+  "files": [
+    "src/**/*.js",
+    "scripts/**/*.js",
+    "types/**/*.d.ts"
+  ],
+  "scripts": {
+    "start": "node src/server/index.js",
+    "postinstall": "node scripts/postinstall.js",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "nwjs",
+    "mcp",
+    "model-context-protocol",
+    "testing",
+    "automation",
+    "claude"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.0.0"
+  },
+  "peerDependencies": {
+    "nw": "*"
+  },
+  "peerDependenciesMeta": {
+    "nw": {
+      "optional": true
+    }
+  }
+}
