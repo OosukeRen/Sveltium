@@ -2,3 +2,16 @@ node_modules
 pnpm-lock.yaml
 temp
 package-lock.json
+nw_cache
+packages/nwjs-addons/build/
+
+AGENTS.md
+CLAUDE.md
+PROJECT_SPEC_XPCODE.md
+PROJECT_SPEC.md
+ROADMAP.md
+IMPLEMENTATION_PLAN.md
+SPEC.md
+
+.vscode
+.claude
