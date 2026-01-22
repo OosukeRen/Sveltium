@@ -64,6 +64,10 @@ include_directories("nw-sqlite3/src")
 file(GLOB CSVPARSER_SRC "csv-parser/src/*.cpp")
 list(APPEND SOURCES ${CSVPARSER_SRC})
 
+# RSS Parser addon
+file(GLOB RSSPARSER_SRC "rss-parser/src/*.cpp")
+list(APPEND SOURCES ${RSSPARSER_SRC})
+
 # Single combined addon
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 

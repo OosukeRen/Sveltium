@@ -8,6 +8,7 @@ void InitCallDLL(v8::Local<v8::Object> exports);
 void InitTinyCC(v8::Local<v8::Object> exports);
 void InitSQLite3(v8::Local<v8::Object> exports);
 void InitCsvParser(v8::Local<v8::Object> exports);
+void InitRssParser(v8::Local<v8::Object> exports);
 
 NAN_MODULE_INIT(InitAll) {
   InitClipboard(target);
@@ -17,6 +18,7 @@ NAN_MODULE_INIT(InitAll) {
   InitTinyCC(target);
   InitSQLite3(target);
   InitCsvParser(target);
+  InitRssParser(target);
 }
 
 NODE_MODULE(nwjs_addons, InitAll)

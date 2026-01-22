@@ -11,7 +11,8 @@
     "./nw-sqlite3": "./nw-sqlite3/index.js",
     "./tinycc": "./tinycc/index.js",
     "./call-dll": "./call-dll/index.js",
-    "./csv-parser": "./csv-parser/index.js"
+    "./csv-parser": "./csv-parser/index.js",
+    "./rss-parser": "./rss-parser/index.js"
   },
   "files": [
     "index.js",
@@ -22,6 +23,7 @@
     "tinycc",
     "call-dll",
     "csv-parser",
+    "rss-parser",
     "build"
   ],
   "scripts": {
@@ -44,6 +46,10 @@
     "dll",
     "csv",
     "csv-parser",
+    "rss",
+    "rss-parser",
+    "atom",
+    "feed",
     "windows-xp"
   ],
   "license": "MIT",

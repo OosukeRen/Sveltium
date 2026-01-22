@@ -19,6 +19,7 @@ var folderDialog = require('./folder-dialog')
 var ipc = require('./ipc')
 var callDll = require('./call-dll')
 var csvParser = require('./csv-parser')
+var rssParser = require('./rss-parser')
 
 // Optional addons - may not be available
 var tinycc = null
@@ -43,5 +44,6 @@ module.exports = {
   callDll: callDll,
   tinycc: tinycc,
   sqlite3: sqlite3,
-  csvParser: csvParser
+  csvParser: csvParser,
+  rssParser: rssParser
 }
