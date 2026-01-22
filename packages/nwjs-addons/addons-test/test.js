@@ -77,6 +77,7 @@ function init() {
     { name: 'folderDialog', obj: addons.folderDialog },
     { name: 'ipc', obj: addons.ipc },
     { name: 'callDll', obj: addons.callDll },
+    { name: 'csvParser', obj: addons.csvParser },
     { name: 'tinycc', obj: addons.tinycc, check: function() { return addons.tinycc && addons.tinycc.isAvailable(); } },
     { name: 'sqlite3', obj: addons.sqlite3, check: function() { return addons.sqlite3 && addons.sqlite3.isAvailable(); } }
   ];
@@ -578,6 +579,117 @@ function tinyccCallFunction() {
   } catch (err) {
     log('TinyCC call failed: ' + err.message, 'error');
     setOutput('tinycc-output', 'Error: ' + err.message);
+  }
+}
+
+// ============================================
+// CSV Parser Tests
+// ============================================
+
+function csvParse() {
+  if (!addons.csvParser) {
+    log('CSV Parser addon not available', 'error');
+    return;
+  }
+
+  try {
+    var csvText = document.getElementById('csv-input').value;
+    var result = addons.csvParser.parse(csvText);
+
+    log('CSV: Parsed ' + result.length + ' rows', 'success');
+    setOutput('csv-output', 'Parsed (' + result.length + ' rows):\n' + JSON.stringify(result, null, 2));
+  } catch (err) {
+    log('CSV parse failed: ' + err.message, 'error');
+    setOutput('csv-output', 'Error: ' + err.message);
+  }
+}
+
+function csvParseNoHeaders() {
+  if (!addons.csvParser) {
+    log('CSV Parser addon not available', 'error');
+    return;
+  }
+
+  try {
+    var csvText = document.getElementById('csv-input').value;
+    var result = addons.csvParser.parse(csvText, { headers: false });
+
+    log('CSV: Parsed ' + result.length + ' rows (no headers)', 'success');
+    setOutput('csv-output', 'Parsed (' + result.length + ' rows):\n' + JSON.stringify(result, null, 2));
+  } catch (err) {
+    log('CSV parse failed: ' + err.message, 'error');
+    setOutput('csv-output', 'Error: ' + err.message);
+  }
+}
+
+function csvParseCustomDelimiter() {
+  if (!addons.csvParser) {
+    log('CSV Parser addon not available', 'error');
+    return;
+  }
+
+  try {
+    var csvText = document.getElementById('csv-input').value;
+    var delimiter = document.getElementById('csv-delimiter').value || ',';
+    var result = addons.csvParser.parse(csvText, { delimiter: delimiter });
+
+    log('CSV: Parsed with delimiter "' + delimiter + '"', 'success');
+    setOutput('csv-output', 'Parsed (' + result.length + ' rows):\n' + JSON.stringify(result, null, 2));
+  } catch (err) {
+    log('CSV parse failed: ' + err.message, 'error');
+    setOutput('csv-output', 'Error: ' + err.message);
+  }
+}
+
+function csvStringify() {
+  if (!addons.csvParser) {
+    log('CSV Parser addon not available', 'error');
+    return;
+  }
+
+  try {
+    var data = [
+      { name: 'Alice', age: 30, city: 'New York' },
+      { name: 'Bob', age: 25, city: 'Los Angeles' },
+      { name: 'Charlie', age: 35, city: 'Chicago' }
+    ];
+
+    var result = addons.csvParser.stringify(data);
+
+    log('CSV: Stringified ' + data.length + ' objects', 'success');
+    setOutput('csv-output', 'Stringified:\n' + result);
+  } catch (err) {
+    log('CSV stringify failed: ' + err.message, 'error');
+    setOutput('csv-output', 'Error: ' + err.message);
+  }
+}
+
+function csvRoundTrip() {
+  if (!addons.csvParser) {
+    log('CSV Parser addon not available', 'error');
+    return;
+  }
+
+  try {
+    var csvText = document.getElementById('csv-input').value;
+
+    // Parse -> Stringify -> Parse
+    var parsed1 = addons.csvParser.parse(csvText);
+    var stringified = addons.csvParser.stringify(parsed1);
+    var parsed2 = addons.csvParser.parse(stringified);
+
+    var match = JSON.stringify(parsed1) === JSON.stringify(parsed2);
+
+    var output = 'Round-trip test: ' + (match ? 'PASS' : 'FAIL') + '\n\n';
+    output += 'Original parsed:\n' + JSON.stringify(parsed1, null, 2) + '\n\n';
+    output += 'Stringified:\n' + stringified + '\n';
+    output += 'Re-parsed:\n' + JSON.stringify(parsed2, null, 2);
+
+    log('CSV: Round-trip test ' + (match ? 'passed' : 'FAILED'), match ? 'success' : 'error');
+    setOutput('csv-output', output);
+  } catch (err) {
+    log('CSV round-trip failed: ' + err.message, 'error');
+    setOutput('csv-output', 'Error: ' + err.message);
   }
 }
 

@@ -96,6 +96,28 @@ int multiply(int a, int b) {
     <div class="output" id="tinycc-output"></div>
   </section>
 
+  <!-- CSV Parser Tests -->
+  <section class="test-section">
+    <h2>CSV Parser</h2>
+    <div class="test-row">
+      <textarea id="csv-input" rows="4" placeholder="CSV data...">name,age,city
+Alice,30,New York
+Bob,25,Los Angeles
+"Charlie, Jr.",35,"San Francisco"</textarea>
+    </div>
+    <div class="test-row">
+      <button onclick="csvParse()">Parse CSV</button>
+      <button onclick="csvParseNoHeaders()">Parse (No Headers)</button>
+      <button onclick="csvStringify()">Stringify</button>
+    </div>
+    <div class="test-row">
+      <input type="text" id="csv-delimiter" placeholder="Delimiter" value="," style="width:60px">
+      <button onclick="csvParseCustomDelimiter()">Parse with Delimiter</button>
+      <button onclick="csvRoundTrip()">Round-trip Test</button>
+    </div>
+    <div class="output" id="csv-output"></div>
+  </section>
+
   <!-- SQLite3 Tests -->
   <section class="test-section">
     <h2>SQLite3</h2>
