@@ -20,6 +20,9 @@ var currentDb = null;
 var currentCompiler = null;
 var ipcServer = null;
 var ipcClient = null;
+var currentJoystick = null;
+var currentGameController = null;
+var sdl2PollInterval = null;
 
 // ============================================
 // Console Logging
@@ -79,6 +82,7 @@ function init() {
     { name: 'callDll', obj: addons.callDll },
     { name: 'csvParser', obj: addons.csvParser },
     { name: 'rssParser', obj: addons.rssParser },
+    { name: 'sdl2Input', obj: addons.sdl2Input },
     { name: 'tinycc', obj: addons.tinycc, check: function() { return addons.tinycc && addons.tinycc.isAvailable(); } },
     { name: 'sqlite3', obj: addons.sqlite3, check: function() { return addons.sqlite3 && addons.sqlite3.isAvailable(); } }
   ];
@@ -878,6 +882,201 @@ function sqlite3Benchmark() {
     log('SQLite3 benchmark failed: ' + err.message, 'error');
     setOutput('sqlite3-output', 'Error: ' + err.message);
   }
+}
+
+// ============================================
+// SDL2 Input Tests
+// ============================================
+
+function sdl2ListDevices() {
+  if (!addons.sdl2Input) {
+    log('SDL2 Input addon not available', 'error');
+    return;
+  }
+
+  try {
+    var joysticks = addons.sdl2Input.getJoysticks();
+    var controllers = addons.sdl2Input.getGameControllers();
+
+    var output = 'Joysticks (' + joysticks.length + '):\n';
+    joysticks.forEach(function(joy, i) {
+      output += '  [' + i + '] ' + joy.name + ' (axes:' + joy.numAxes + ', btns:' + joy.numButtons + ', hats:' + joy.numHats + ')\n';
+      output += '      GUID: ' + joy.guid + '\n';
+      output += '      GameController: ' + (joy.isGameController ? 'Yes' : 'No') + '\n';
+    });
+
+    output += '\nGame Controllers (' + controllers.length + '):\n';
+    controllers.forEach(function(gc, i) {
+      output += '  [' + gc.deviceIndex + '] ' + gc.name + '\n';
+    });
+
+    log('SDL2: Found ' + joysticks.length + ' joystick(s), ' + controllers.length + ' game controller(s)', 'success');
+    setOutput('sdl2-output', output);
+  } catch (err) {
+    log('SDL2 list devices failed: ' + err.message, 'error');
+    setOutput('sdl2-output', 'Error: ' + err.message);
+  }
+}
+
+function sdl2OpenJoystick() {
+  if (!addons.sdl2Input) {
+    log('SDL2 Input addon not available', 'error');
+    return;
+  }
+
+  try {
+    var deviceIndex = parseInt(document.getElementById('sdl2-device-index').value, 10) || 0;
+
+    if (currentJoystick) {
+      currentJoystick.close();
+    }
+
+    currentJoystick = new addons.sdl2Input.Joystick(deviceIndex);
+    log('SDL2: Opened joystick at index ' + deviceIndex, 'success');
+    setOutput('sdl2-output', 'Joystick opened at index ' + deviceIndex);
+  } catch (err) {
+    log('SDL2 open joystick failed: ' + err.message, 'error');
+    setOutput('sdl2-output', 'Error: ' + err.message);
+  }
+}
+
+function sdl2OpenGameController() {
+  if (!addons.sdl2Input) {
+    log('SDL2 Input addon not available', 'error');
+    return;
+  }
+
+  try {
+    var deviceIndex = parseInt(document.getElementById('sdl2-device-index').value, 10) || 0;
+
+    if (currentGameController) {
+      currentGameController.close();
+    }
+
+    currentGameController = new addons.sdl2Input.GameController(deviceIndex);
+    var name = currentGameController.getName();
+    log('SDL2: Opened game controller "' + name + '" at index ' + deviceIndex, 'success');
+    setOutput('sdl2-output', 'Game Controller opened: ' + name);
+  } catch (err) {
+    log('SDL2 open game controller failed: ' + err.message, 'error');
+    setOutput('sdl2-output', 'Error: ' + err.message);
+  }
+}
+
+function sdl2StartPolling() {
+  if (!addons.sdl2Input) {
+    log('SDL2 Input addon not available', 'error');
+    return;
+  }
+
+  if (sdl2PollInterval) {
+    clearInterval(sdl2PollInterval);
+  }
+
+  sdl2PollInterval = setInterval(function() {
+    addons.sdl2Input.update();
+
+    var output = '';
+
+    if (currentGameController) {
+      var state = currentGameController.getState();
+      output += 'Game Controller State:\n';
+      output += '  Left Stick:  X=' + state.leftStickX + ', Y=' + state.leftStickY + '\n';
+      output += '  Right Stick: X=' + state.rightStickX + ', Y=' + state.rightStickY + '\n';
+      output += '  Triggers:    L=' + state.leftTrigger + ', R=' + state.rightTrigger + '\n';
+      output += '  Face Buttons: A=' + state.a + ' B=' + state.b + ' X=' + state.x + ' Y=' + state.y + '\n';
+      output += '  Shoulders:   LB=' + state.leftShoulder + ' RB=' + state.rightShoulder + '\n';
+      output += '  D-Pad:       Up=' + state.dpadUp + ' Down=' + state.dpadDown + ' Left=' + state.dpadLeft + ' Right=' + state.dpadRight + '\n';
+      output += '  Misc:        Back=' + state.back + ' Start=' + state.start + ' Guide=' + state.guide + '\n';
+      output += '  Sticks:      L3=' + state.leftStick + ' R3=' + state.rightStick + '\n';
+    } else if (currentJoystick) {
+      var state = currentJoystick.getState();
+      output += 'Joystick State:\n';
+      output += '  Axes: ' + state.axes.join(', ') + '\n';
+      output += '  Buttons: ' + state.buttons.map(function(b) { return b ? '1' : '0'; }).join('') + '\n';
+      output += '  Hats: ' + state.hats.join(', ') + '\n';
+    } else {
+      output = 'No joystick or controller open.\nOpen one first, then start polling.';
+    }
+
+    setOutput('sdl2-output', output);
+  }, 50); // 20 Hz polling
+
+  log('SDL2: Started polling input at 20Hz', 'success');
+}
+
+function sdl2StopPolling() {
+  if (sdl2PollInterval) {
+    clearInterval(sdl2PollInterval);
+    sdl2PollInterval = null;
+    log('SDL2: Stopped polling', 'info');
+    setOutput('sdl2-output', 'Polling stopped');
+  }
+}
+
+function sdl2Rumble() {
+  if (!currentGameController && !currentJoystick) {
+    log('No joystick or controller open', 'warn');
+    return;
+  }
+
+  try {
+    var lowFreq = 0xFFFF;
+    var highFreq = 0xFFFF;
+    var duration = 200;
+
+    var success = false;
+    if (currentGameController) {
+      success = currentGameController.rumble(lowFreq, highFreq, duration);
+    } else if (currentJoystick) {
+      success = currentJoystick.rumble(lowFreq, highFreq, duration);
+    }
+
+    log('SDL2: Rumble ' + (success ? 'triggered' : 'not supported'), success ? 'success' : 'warn');
+    setOutput('sdl2-output', 'Rumble: ' + (success ? 'OK' : 'Not supported'));
+  } catch (err) {
+    log('SDL2 rumble failed: ' + err.message, 'error');
+    setOutput('sdl2-output', 'Error: ' + err.message);
+  }
+}
+
+function sdl2GetMouse() {
+  if (!addons.sdl2Input) {
+    log('SDL2 Input addon not available', 'error');
+    return;
+  }
+
+  try {
+    var state = addons.sdl2Input.getGlobalMouseState();
+    var output = 'Mouse State (Global):\n';
+    output += '  Position: X=' + state.x + ', Y=' + state.y + '\n';
+    output += '  Buttons: Left=' + state.left + ' Middle=' + state.middle + ' Right=' + state.right + '\n';
+    output += '  Extra: X1=' + state.x1 + ' X2=' + state.x2 + '\n';
+
+    log('SDL2: Got mouse state', 'success');
+    setOutput('sdl2-output', output);
+  } catch (err) {
+    log('SDL2 get mouse failed: ' + err.message, 'error');
+    setOutput('sdl2-output', 'Error: ' + err.message);
+  }
+}
+
+function sdl2Close() {
+  sdl2StopPolling();
+
+  if (currentJoystick) {
+    currentJoystick.close();
+    currentJoystick = null;
+    log('SDL2: Joystick closed', 'info');
+  }
+
+  if (currentGameController) {
+    currentGameController.close();
+    currentGameController = null;
+    log('SDL2: Game controller closed', 'info');
+  }
+
+  setOutput('sdl2-output', 'Devices closed');
 }
 
 // ============================================

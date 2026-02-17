@@ -12,7 +12,8 @@
     "./tinycc": "./tinycc/index.js",
     "./call-dll": "./call-dll/index.js",
     "./csv-parser": "./csv-parser/index.js",
-    "./rss-parser": "./rss-parser/index.js"
+    "./rss-parser": "./rss-parser/index.js",
+    "./sdl2-input": "./sdl2-input/index.js"
   },
   "files": [
     "index.js",
@@ -24,6 +25,7 @@
     "call-dll",
     "csv-parser",
     "rss-parser",
+    "sdl2-input",
     "build"
   ],
   "scripts": {
@@ -50,6 +52,12 @@
     "rss-parser",
     "atom",
     "feed",
+    "sdl2",
+    "joystick",
+    "gamepad",
+    "controller",
+    "input",
+    "rumble",
     "windows-xp"
   ],
   "license": "MIT",

@@ -6,6 +6,9 @@
  * - folderDialog: Native folder selection dialog
  * - ipc: Inter-process communication via named pipes
  * - callDll: Dynamic DLL loading and function calling (FFI)
+ * - csvParser: CSV file parsing
+ * - rssParser: RSS/Atom feed parsing
+ * - sdl2Input: Joystick, gamepad, and mouse input via SDL2
  *
  * Optional addons (require additional setup):
  * - tinycc: Runtime C compilation (requires libtcc)
@@ -20,6 +23,7 @@ var ipc = require('./ipc')
 var callDll = require('./call-dll')
 var csvParser = require('./csv-parser')
 var rssParser = require('./rss-parser')
+var sdl2Input = require('./sdl2-input')
 
 // Optional addons - may not be available
 var tinycc = null
@@ -45,5 +49,6 @@ module.exports = {
   tinycc: tinycc,
   sqlite3: sqlite3,
   csvParser: csvParser,
-  rssParser: rssParser
+  rssParser: rssParser,
+  sdl2Input: sdl2Input
 }

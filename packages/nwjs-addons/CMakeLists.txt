@@ -68,6 +68,13 @@ list(APPEND SOURCES ${CSVPARSER_SRC})
 file(GLOB RSSPARSER_SRC "rss-parser/src/*.cpp")
 list(APPEND SOURCES ${RSSPARSER_SRC})
 
+# SDL2 Input addon
+file(GLOB SDL2INPUT_SRC "sdl2-input/src/*.cpp")
+list(APPEND SOURCES ${SDL2INPUT_SRC})
+include_directories("sdl2-input/src")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../temp/vendored/SDL2/include")
+link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../temp/vendored/SDL2/build-xp/Release")
+
 # Single combined addon
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
@@ -89,5 +96,10 @@ if(WIN32)
     Gdiplus.lib
     User32.lib
     libtcc.lib
+    SDL2-static.lib
+    winmm.lib
+    imm32.lib
+    version.lib
+    setupapi.lib
   )
 endif()

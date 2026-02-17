@@ -155,6 +155,25 @@ Bob,25,Los Angeles
     <div class="output" id="rss-output"></div>
   </section>
 
+  <!-- SDL2 Input Tests -->
+  <section class="test-section">
+    <h2>SDL2 Input (Joystick/Gamepad/Mouse)</h2>
+    <div class="test-row">
+      <button onclick="sdl2ListDevices()">List Devices</button>
+      <input type="number" id="sdl2-device-index" placeholder="Index" value="0" style="width:60px">
+      <button onclick="sdl2OpenJoystick()">Open Joystick</button>
+      <button onclick="sdl2OpenGameController()">Open GameController</button>
+    </div>
+    <div class="test-row">
+      <button onclick="sdl2StartPolling()">Start Polling</button>
+      <button onclick="sdl2StopPolling()">Stop Polling</button>
+      <button onclick="sdl2Rumble()">Rumble</button>
+      <button onclick="sdl2GetMouse()">Get Mouse</button>
+      <button onclick="sdl2Close()">Close</button>
+    </div>
+    <div class="output" id="sdl2-output" style="font-family: monospace; white-space: pre;"></div>
+  </section>
+
   <!-- SQLite3 Tests -->
   <section class="test-section">
     <h2>SQLite3</h2>
