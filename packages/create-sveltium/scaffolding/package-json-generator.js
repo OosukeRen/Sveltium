@@ -49,6 +49,8 @@ const TYPESCRIPT_DEV_DEPENDENCIES = {
  */
 const ESLINT_DEV_DEPENDENCIES = {
   eslint: '^9.0.0',
+  '@sveltium/eslint-rules': '^1.0.0',
+  'eslint-config-prettier': '^10.0.0',
 }
 
 /**
