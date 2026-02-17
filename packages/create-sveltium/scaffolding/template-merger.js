@@ -3,11 +3,11 @@ import { fileURLToPath } from 'node:url'
 import { copyDir } from '../utils/file-utils.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const TEMPLATES_DIR = path.resolve(__dirname, '../../../templates')
+const TEMPLATES_DIR = path.resolve(__dirname, '../templates')
 
 const TEMPLATE_BASE = 'base'
 const TEMPLATE_TYPESCRIPT = 'sveltium-project-ts'
-const TEMPLATE_JAVASCRIPT = 'svelitum-project-js'
+const TEMPLATE_JAVASCRIPT = 'sveltium-project-js'
 const TEMPLATE_LINTING = 'linting'
 
 const LANGUAGE_TEMPLATE_MAP = {

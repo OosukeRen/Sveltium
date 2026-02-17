@@ -11,6 +11,7 @@
     "questions.js",
     "regex-helpers.js",
     "scaffolding",
+    "templates",
     "utils"
   ],
   "keywords": [
