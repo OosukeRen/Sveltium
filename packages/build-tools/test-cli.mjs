@@ -376,11 +376,12 @@ async function testPackageManagerDetection() {
     { lockfile: "pnpm-lock.yaml", expected: "pnpm" },
     { lockfile: "yarn.lock", expected: "yarn" },
     { lockfile: "bun.lockb", expected: "bun" },
+    { lockfile: "bun.lock", expected: "bun" },
     { lockfile: "package-lock.json", expected: "npm" },
   ];
 
   for (const { lockfile, expected } of cases) {
-    const dir = createTempProject(`pm-${expected}`, { lockfile });
+    const dir = createTempProject(`pm-${lockfile.replace(".", "-")}`, { lockfile });
 
     test(`detects ${expected} from ${lockfile}`, () => {
       const detected = detectPackageManager(dir);
@@ -395,6 +396,61 @@ async function testPackageManagerDetection() {
   test("defaults to npm when no lockfile", () => {
     const detected = detectPackageManager(emptyDir);
     assert(detected === "npm", `expected "npm", got "${detected}"`);
+  });
+}
+
+async function testWindowDeepMerge() {
+  console.log("\n--- config: window deep merge ---");
+
+  const sharedUrl = pathToFileURL(path.join(__dirname, "config-loader.js")).href;
+  const { loadConfig } = await import(sharedUrl);
+
+  const dir = createTempProject("window-merge", {
+    packageJson: { name: "test-app", version: "1.0.0" },
+    config: {
+      app: {
+        window: { width: 1920 },
+      },
+      profiles: {
+        dev: { version: "0.89.0", flavor: "sdk", platforms: ["win64"] },
+      },
+    },
+  });
+
+  // loadConfig uses process.cwd(), so we run it via CLI and check --list works
+  const result = runCli("build.js", ["--list"], dir);
+
+  test("partial window override does not crash --list", () => {
+    assert(result.status === 0, `expected exit 0, got ${result.status}: ${result.stderr}`);
+  });
+
+  test("output includes dev profile", () => {
+    assert(result.stdout.includes("dev"), "stdout should include 'dev'");
+  });
+}
+
+function testReservedFlagWarning() {
+  console.log("\n--- config: reserved flag profile name ---");
+
+  const dir = createTempProject("reserved-flag", {
+    packageJson: { name: "test-app", version: "1.0.0" },
+    config: {
+      profiles: {
+        list: { version: "0.89.0", flavor: "sdk", platforms: ["win64"] },
+        dev: { version: "0.89.0", flavor: "sdk", platforms: ["win64"] },
+      },
+    },
+  });
+
+  const result = runCli("build.js", ["--list"], dir);
+
+  test("exits 0 (--list still works)", () => {
+    assert(result.status === 0, `expected exit 0, got ${result.status}: ${result.stderr}`);
+  });
+
+  test("warns about reserved profile name", () => {
+    const output = result.stdout + result.stderr;
+    assert(output.includes("conflicts"), "output should warn about reserved flag conflict");
   });
 }
 
@@ -418,6 +474,8 @@ try {
   testProfileMissingFlavor();
   testProfileEmptyPlatforms();
   await testPackageManagerDetection();
+  await testWindowDeepMerge();
+  testReservedFlagWarning();
 } finally {
   cleanup();
 }

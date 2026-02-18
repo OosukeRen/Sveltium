@@ -52,10 +52,19 @@ export function writeAppPackageJson(outputDir, appConfig) {
   );
 }
 
+const RESERVED_FLAGS = ["list", "no-vite", "legacy", "help", "version"];
+
 export function getProfileFromArgs(config) {
   const profileNames = Object.keys(config.profiles || {});
 
   for (const name of profileNames) {
+    const isReserved = RESERVED_FLAGS.includes(name);
+
+    if (isReserved) {
+      console.warn(`Warning: profile name "${name}" conflicts with reserved flag --${name}`);
+      continue;
+    }
+
     if (hasArgument(name)) {
       return name;
     }
@@ -69,6 +78,7 @@ export function detectPackageManager(projectDir) {
     "pnpm-lock.yaml": "pnpm",
     "yarn.lock": "yarn",
     "bun.lockb": "bun",
+    "bun.lock": "bun",
     "package-lock.json": "npm",
   };
 
@@ -90,6 +100,14 @@ export function listProfiles(config) {
   if (!hasProfiles) {
     console.log("No profiles defined in sveltium.config.js");
     return;
+  }
+
+  for (const name of names) {
+    const isReserved = RESERVED_FLAGS.includes(name);
+
+    if (isReserved) {
+      console.warn(`Warning: profile name "${name}" conflicts with reserved flag --${name}`);
+    }
   }
 
   console.log(names.join("\n"));

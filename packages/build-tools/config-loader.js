@@ -80,10 +80,16 @@ export async function loadConfig() {
   const defaultApp = buildDefaultAppConfig(packageJson);
   const defaultBuild = buildDefaultBuildConfig();
 
-  const app = { ...defaultApp, ...userConfig.app };
-  const build = { ...defaultBuild, ...userConfig.build };
+  const mergedApp = { ...defaultApp, ...userConfig.app };
+  mergedApp.window = { ...defaultApp.window, ...userConfig.app?.window };
+
+  const mergedBuild = { ...defaultBuild, ...userConfig.build };
+  mergedBuild.distDir = path.resolve(mergedBuild.distDir);
+  mergedBuild.cacheDir = path.resolve(mergedBuild.cacheDir);
+  mergedBuild.outputDir = path.resolve(mergedBuild.outputDir);
+
   const profiles = userConfig.profiles || {};
   const enableLegacy = userConfig.enableLegacy || false;
 
-  return { app, build, profiles, enableLegacy };
+  return { app: mergedApp, build: mergedBuild, profiles, enableLegacy };
 }
