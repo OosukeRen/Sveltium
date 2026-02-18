@@ -1,6 +1,6 @@
 {
   "name": "nwjs-addons",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Native C++ addons for NW.js applications (Windows XP compatible)",
   "main": "./index.js",
   "exports": {
@@ -29,7 +29,7 @@
     "csv-parser",
     "rss-parser",
     "sdl2-input",
-    "build"
+    "build/Release/nwjs_addons.node"
   ],
   "scripts": {
     "install": "node install.js",
