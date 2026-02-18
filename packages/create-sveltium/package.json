@@ -1,6 +1,11 @@
 {
   "name": "@sveltium/create",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "author": {
+    "email": "oosukeren@gmail.com",
+    "name": "Oosuke Ren",
+    "url": "https://github.com/OosukeRen"
+  },
   "description": "CLI tool to scaffold Sveltium projects with NW.js, Svelte, and Vite",
   "type": "module",
   "bin": {
