@@ -163,8 +163,7 @@ export function resolveTargets(platforms) {
     const target = PLATFORM_ARCH_MAP[platformKey];
 
     if (!target) {
-      console.error(`Unsupported platform: ${platformKey}`);
-      process.exit(EXIT_FAILURE);
+      throw new Error(`Unsupported platform: ${platformKey}`);
     }
 
     targets.push(target);
@@ -209,6 +208,17 @@ async function buildProfile(profileName, config) {
 
   const targets = resolveTargets(profile.platforms);
   const baseOutputDir = profile.outputDir || config.build.outputDir;
+
+  await buildTargets(targets, {
+    distDir,
+    baseOutputDir,
+    profile,
+    config,
+  });
+}
+
+async function buildTargets(targets, options) {
+  const { distDir, baseOutputDir, profile, config } = options;
   const appIconPath = config.app.icon || "";
   const appConfig = {
     name: config.app.name,
@@ -216,41 +226,36 @@ async function buildProfile(profileName, config) {
     icon: appIconPath,
   };
 
-  try {
-    for (const target of targets) {
-      const outputDir = path.join(
-        baseOutputDir,
-        `${target.platform}${PLATFORM_DIR_SEPARATOR}${target.arch}`
-      );
+  for (const target of targets) {
+    const outputDir = path.join(
+      baseOutputDir,
+      `${target.platform}${PLATFORM_DIR_SEPARATOR}${target.arch}`
+    );
 
-      // Skip full nwbuild if runtime already exists in output
-      if (hasNwRuntime(outputDir, target.platform)) {
-        console.log(`NW.js runtime found in ${outputDir}, copying app files only...`);
-        copyAppFiles(distDir, outputDir, target.platform);
-        continue;
-      }
-
-      const targetLabel = `${target.platform}-${target.arch}`;
-      console.log(`Building ${targetLabel}...`);
-
-      await nwbuild({
-        mode: "build",
-        srcDir: distDir,
-        glob: false,
-        version: profile.version,
-        flavor: profile.flavor,
-        platform: target.platform,
-        arch: target.arch,
-        cacheDir: config.build.cacheDir,
-        outDir: outputDir,
-        app: appConfig,
-      });
-
-      console.log(`Done: ${targetLabel} -> ${outputDir}`);
+    // Skip full nwbuild if runtime already exists in output
+    if (hasNwRuntime(outputDir, target.platform)) {
+      console.log(`NW.js runtime found in ${outputDir}, copying app files only...`);
+      copyAppFiles(distDir, outputDir, target.platform);
+      continue;
     }
-  } catch (error) {
-    console.error("Build failed:", error.message);
-    process.exit(EXIT_FAILURE);
+
+    const targetLabel = `${target.platform}-${target.arch}`;
+    console.log(`Building ${targetLabel}...`);
+
+    await nwbuild({
+      mode: "build",
+      srcDir: distDir,
+      glob: false,
+      version: profile.version,
+      flavor: profile.flavor,
+      platform: target.platform,
+      arch: target.arch,
+      cacheDir: config.build.cacheDir,
+      outDir: outputDir,
+      app: appConfig,
+    });
+
+    console.log(`Done: ${targetLabel} -> ${outputDir}`);
   }
 }
 
