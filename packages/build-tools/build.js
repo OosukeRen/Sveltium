@@ -12,6 +12,7 @@ import {
   getProfileFromArgs,
   listProfiles,
   resolveLegacy,
+  detectPackageManager,
 } from "./shared.js";
 
 const LIST_ARG_NAME = "list";
@@ -67,18 +68,31 @@ function clearDirContents(dirPath) {
   }
 }
 
+function hasAppBundle(outputDir) {
+  if (!fs.existsSync(outputDir)) {
+    return false;
+  }
+
+  const appBundle = fs.readdirSync(outputDir).find((entry) => entry.endsWith(".app"));
+  return Boolean(appBundle);
+}
+
 function hasNwRuntime(outputDir, platform) {
   // Check for files that are always present in NW.js builds
   // nw.exe gets renamed to app name, so check for other SDK files
-  const markers = {
+  const markersByPlatform = {
     win: ["nwjc.exe", "chromedriver.exe"],
-    osx: ["nwjs.app"],
     linux: ["nwjc", "chromedriver"],
   };
 
-  const platformMarkers = markers[platform] || [];
+  // macOS: the .app bundle may be renamed, so check for any .app directory
+  if (platform === "osx") {
+    return hasAppBundle(outputDir);
+  }
 
-  for (const marker of platformMarkers) {
+  const markers = markersByPlatform[platform] || [];
+
+  for (const marker of markers) {
     if (fs.existsSync(path.join(outputDir, marker))) {
       return true;
     }
@@ -117,6 +131,14 @@ function resolveAppTargetDir(outputDir, platform) {
 function copyAppFiles(distDir, outputDir, platform) {
   // On Windows/Linux, app files usually go into package.nw when it exists
   // On macOS, they go inside the .app bundle's Resources/app.nw
+  const isMacOS = platform === "osx";
+  const macOSBundleMissing = isMacOS && !hasAppBundle(outputDir);
+
+  if (macOSBundleMissing) {
+    console.error(`No .app bundle found in ${outputDir}. Cannot copy app files.`);
+    process.exit(EXIT_FAILURE);
+  }
+
   const targetDir = resolveAppTargetDir(outputDir, platform);
 
   clearDirContents(targetDir);
@@ -172,7 +194,8 @@ async function buildProfile(profileName, config) {
       buildEnv.LEGACY = "true";
     }
 
-    runCommand("npm", ["run", "build"], process.cwd(), buildEnv);
+    const packageManager = detectPackageManager(process.cwd());
+    runCommand(packageManager, ["run", "build"], process.cwd(), buildEnv);
   }
 
   const distDir = config.build.distDir;

@@ -1,6 +1,6 @@
 {
   "name": "@sveltium/build-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Build and packaging tools for Sveltium NW.js applications",
   "type": "module",
   "bin": {
@@ -24,6 +24,9 @@
     "email": "oosukeren@gmail.com",
     "url": "https://github.com/OosukeRen"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,6 +34,6 @@
     "directory": "packages/build-tools"
   },
   "dependencies": {
-    "nw-builder": "^4.0.0"
+    "nw-builder": "^4.17.0"
   }
 }

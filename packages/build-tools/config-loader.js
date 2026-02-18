@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { EXIT_FAILURE } from "./shared.js";
 
 const CONFIG_FILE_NAME = "sveltium.config.js";
 const PACKAGE_JSON_NAME = "package.json";
@@ -13,10 +14,20 @@ const DEFAULT_WINDOW_HEIGHT = 768;
 
 function readProjectPackageJson(projectDir) {
   const packageJsonPath = path.join(projectDir, PACKAGE_JSON_NAME);
-  const rawContent = fs.readFileSync(packageJsonPath, "utf-8");
-  const packageJson = JSON.parse(rawContent);
 
-  return packageJson;
+  try {
+    const rawContent = fs.readFileSync(packageJsonPath, "utf-8");
+    const packageJson = JSON.parse(rawContent);
+    return packageJson;
+  } catch (error) {
+    const isNotFound = error.code === "ENOENT";
+    const message = isNotFound
+      ? `Could not find package.json in ${projectDir}. Run this command from your project root.`
+      : `Failed to parse package.json: ${error.message}`;
+
+    console.error(message);
+    process.exit(EXIT_FAILURE);
+  }
 }
 
 async function loadUserConfig(projectDir) {
@@ -27,11 +38,14 @@ async function loadUserConfig(projectDir) {
     return {};
   }
 
-  // Dynamic import using file:// URL for Windows compatibility
-  const configUrl = pathToFileURL(configPath).href;
-  const configModule = await import(configUrl);
-
-  return configModule.default || {};
+  try {
+    const configUrl = pathToFileURL(configPath).href;
+    const configModule = await import(configUrl);
+    return configModule.default || {};
+  } catch (error) {
+    console.error(`Failed to load ${CONFIG_FILE_NAME}: ${error.message}`);
+    process.exit(EXIT_FAILURE);
+  }
 }
 
 function buildDefaultAppConfig(packageJson) {

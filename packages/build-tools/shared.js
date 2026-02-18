@@ -56,8 +56,34 @@ export function getProfileFromArgs(config) {
   return DEFAULT_PROFILE_NAME;
 }
 
+export function detectPackageManager(projectDir) {
+  const lockfileToManager = {
+    "pnpm-lock.yaml": "pnpm",
+    "yarn.lock": "yarn",
+    "bun.lockb": "bun",
+    "package-lock.json": "npm",
+  };
+
+  for (const [lockfile, manager] of Object.entries(lockfileToManager)) {
+    const lockfilePath = path.join(projectDir, lockfile);
+
+    if (fs.existsSync(lockfilePath)) {
+      return manager;
+    }
+  }
+
+  return "npm";
+}
+
 export function listProfiles(config) {
   const names = Object.keys(config.profiles || {});
+  const hasProfiles = names.length > 0;
+
+  if (!hasProfiles) {
+    console.log("No profiles defined in sveltium.config.js");
+    return;
+  }
+
   console.log(names.join("\n"));
 }
 

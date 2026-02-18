@@ -3,6 +3,7 @@ import fs from "node:fs";
 import nwbuild from "nw-builder";
 import { loadConfig } from "./config-loader.js";
 import {
+  EXIT_SUCCESS,
   EXIT_FAILURE,
   hasArgument,
   runCommand,
@@ -10,6 +11,7 @@ import {
   getProfileFromArgs,
   listProfiles,
   resolveLegacy,
+  detectPackageManager,
 } from "./shared.js";
 
 const NO_VITE_ARG_NAME = "no-vite";
@@ -31,7 +33,8 @@ async function runProfile(profileName, config) {
       buildEnv.LEGACY = "true";
     }
 
-    runCommand("npm", ["run", "build"], process.cwd(), buildEnv);
+    const packageManager = detectPackageManager(process.cwd());
+    runCommand(packageManager, ["run", "build"], process.cwd(), buildEnv);
   }
 
   const distDir = config.build.distDir;
@@ -63,6 +66,7 @@ async function main() {
   const config = await loadConfig();
   const profileName = getProfileFromArgs(config);
   await runProfile(profileName, config);
+  process.exit(EXIT_SUCCESS);
 }
 
 main();
