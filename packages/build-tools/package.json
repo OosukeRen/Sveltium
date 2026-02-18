@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "description": "Build and packaging tools for Sveltium NW.js applications",
   "type": "module",
-  "main": "./package.js",
-  "exports": "./package.js",
   "bin": {
-    "sveltium-build": "./package.js"
+    "sveltium-build": "./build.js",
+    "sveltium-run": "./run.js"
   },
   "files": [
-    "package.js"
+    "build.js",
+    "run.js",
+    "config-loader.js",
+    "shared.js"
   ],
   "keywords": [
     "sveltium",
