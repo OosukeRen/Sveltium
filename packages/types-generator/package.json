@@ -2,6 +2,11 @@
   "name": "@sveltium/types-generator",
   "version": "1.0.0",
   "type": "module",
+  "author": {
+    "name": "Oosuke Ren",
+    "email": "oosukeren@gmail.com",
+    "url": "https://github.com/OosukeRen"
+  },
   "scripts": {
     "generate": "node generate-nw-types.js"
   }

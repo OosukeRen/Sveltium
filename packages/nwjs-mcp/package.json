@@ -30,7 +30,11 @@
     "automation",
     "claude"
   ],
-  "author": "",
+  "author": {
+    "name": "Oosuke Ren",
+    "email": "oosukeren@gmail.com",
+    "url": "https://github.com/OosukeRen"
+  },
   "license": "MIT",
   "dependencies": {
     "ws": "^8.0.0"

@@ -1,6 +1,6 @@
 {
   "name": "@sveltium/polyfills",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DOM and Proxy polyfills for legacy browser support in Sveltium apps",
   "type": "module",
   "main": "./index.js",
@@ -18,6 +18,11 @@
     "legacy",
     "nwjs"
   ],
+  "author": {
+    "name": "Oosuke Ren",
+    "email": "oosukeren@gmail.com",
+    "url": "https://github.com/OosukeRen"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

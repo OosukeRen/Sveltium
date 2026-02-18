@@ -60,6 +60,11 @@
     "rumble",
     "windows-xp"
   ],
+  "author": {
+    "name": "Oosuke Ren",
+    "email": "oosukeren@gmail.com",
+    "url": "https://github.com/OosukeRen"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

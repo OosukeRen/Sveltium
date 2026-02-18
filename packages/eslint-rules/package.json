@@ -1,6 +1,6 @@
 {
   "name": "@sveltium/eslint-rules",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Custom ESLint rules for Sveltium projects",
   "type": "module",
   "main": "./index.js",
@@ -15,6 +15,11 @@
     "sveltium",
     "code-style"
   ],
+  "author": {
+    "name": "Oosuke Ren",
+    "email": "oosukeren@gmail.com",
+    "url": "https://github.com/OosukeRen"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
