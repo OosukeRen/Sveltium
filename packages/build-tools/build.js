@@ -220,15 +220,10 @@ async function buildProfile(profileName, config) {
 
   try {
     for (const target of targets) {
-      let outputDir = baseOutputDir;
-      const hasMultipleTargets = targets.length > 1;
-
-      if (hasMultipleTargets) {
-        outputDir = path.join(
-          baseOutputDir,
-          `${target.platform}${PLATFORM_DIR_SEPARATOR}${target.arch}`
-        );
-      }
+      const outputDir = path.join(
+        baseOutputDir,
+        `${target.platform}${PLATFORM_DIR_SEPARATOR}${target.arch}`
+      );
 
       // Skip full nwbuild if runtime already exists in output
       if (hasNwRuntime(outputDir, target.platform)) {
