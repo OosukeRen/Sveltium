@@ -1,6 +1,6 @@
 {
   "name": "@sveltium/build-tools",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Build and packaging tools for Sveltium NW.js applications",
   "type": "module",
   "bin": {

@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.2.0
+
+### Fixed
+
+- Unhandled promise rejections in both CLIs (added `.catch()` to `main()`)
+- Profile validation: `version` and `flavor` are now required fields, `platforms` must be non-empty
+- `clearDirContents` no longer throws on missing directories
+- `runCommand` now reports spawn errors and signal terminations
+- Error catch blocks use `error.message` instead of raw error objects
+- `app.window` config is now deep merged (partial overrides preserve defaults)
+- Build paths (`distDir`, `cacheDir`, `outputDir`) are resolved with `path.resolve`
+- `copyAppFiles` no longer wipes NW.js runtime when `package.nw` is missing
+- `resolveTargets` throws instead of calling `process.exit` for better error flow
+
+### Added
+
+- `--help` flag for both `sveltium-build` and `sveltium-run`
+- `--version` flag for both CLIs
+- `--list` flag for `sveltium-run` (was only in build)
+- Default profile fallback logging when no profile flag is given
+- "Available profiles:" header in `listProfiles` output
+- Progress messages during build and run operations
+- `bun.lock` detection (new Bun lockfile format)
+- Warning when profile names conflict with reserved CLI flags
+- Normal-flavor NW.js runtime detection (`icudtl.dat`, `nw_elf.dll`, `libnw.so`)
+- Symlink handling in `copyDir`, `clearDirContents`, and `copyAppFiles`
+- Exported build helpers for testability
+- Unit tests with `node:test` (44 tests across 3 files)
+- Test scripts in `package.json` (`test`, `test:cli`, `test:all`)
+
+### Changed
+
+- Extracted `runViteBuild` and `validateDistDir` to `shared.js` (DRY)
+- Extracted `buildTargets` from `buildProfile` for readability
+- Replaced `hasAppBundle` with `findAppBundle` to fix TOCTOU race condition
+- Simplified `resolveAppTargetDir` nested conditionals
+- Renamed internal variables for clarity (`hasValue` -> `isPresent`, etc.)
+
 ## 0.1.1
 
 ### Fixed

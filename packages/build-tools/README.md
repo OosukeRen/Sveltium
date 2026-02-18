@@ -22,6 +22,8 @@ npx sveltium-build --prod       # builds using the "prod" profile
 npx sveltium-build --list       # lists all available profiles
 npx sveltium-build --no-vite    # skips the vite build step
 npx sveltium-build --legacy     # enables legacy browser support
+npx sveltium-build --help       # shows usage information
+npx sveltium-build --version    # prints the package version
 ```
 
 ### `sveltium-run`
@@ -31,8 +33,11 @@ Launches your app locally with NW.js. Runs `vite build` first (unless skipped), 
 ```bash
 npx sveltium-run                # runs using the "dev" profile
 npx sveltium-run --prod         # runs using the "prod" profile
+npx sveltium-run --list         # lists all available profiles
 npx sveltium-run --no-vite      # skips the vite build step
 npx sveltium-run --legacy       # enables legacy browser support
+npx sveltium-run --help         # shows usage information
+npx sveltium-run --version      # prints the package version
 ```
 
 ## Configuration
@@ -110,7 +115,23 @@ export default {
 
 ## Package manager detection
 
-Both commands automatically detect your project's package manager from lockfiles (`pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`, `package-lock.json`) and use it for the Vite build step. Falls back to `npm` if no lockfile is found.
+Both commands automatically detect your project's package manager from lockfiles (`pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`, `bun.lock`, `package-lock.json`) and use it for the Vite build step. Falls back to `npm` if no lockfile is found.
+
+## Window config deep merge
+
+The `app.window` config is deep merged with defaults, so you can override individual properties without losing the others:
+
+```js
+export default {
+  app: {
+    window: { width: 1920 }, // height and title keep their defaults
+  },
+};
+```
+
+## Profile name restrictions
+
+Profile names must not collide with reserved CLI flags (`list`, `no-vite`, `legacy`, `help`, `version`). A warning is shown if a collision is detected.
 
 ## License
 
