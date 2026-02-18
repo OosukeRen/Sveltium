@@ -282,7 +282,11 @@ async function main() {
   process.exit(EXIT_SUCCESS);
 }
 
-main().catch((error) => {
-  console.error("Build failed:", error.message);
-  process.exit(EXIT_FAILURE);
-});
+const isDirectRun = process.argv[1]?.replace(/\\/g, "/").endsWith("build.js");
+
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error("Build failed:", error.message);
+    process.exit(EXIT_FAILURE);
+  });
+}

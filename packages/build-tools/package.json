@@ -24,6 +24,11 @@
     "email": "oosukeren@gmail.com",
     "url": "https://github.com/OosukeRen"
   },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:cli": "node test-cli.mjs",
+    "test:all": "node --test tests/*.test.mjs && node test-cli.mjs"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
