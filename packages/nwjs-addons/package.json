@@ -33,9 +33,12 @@
   ],
   "scripts": {
     "install": "node install.js",
-    "build": "cmake-js build --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp",
+    "build": "cmake-js compile --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp",
+    "build:xp": "cmake-js compile --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp",
+    "build:modern": "cmake-js compile --runtime nw --runtime-version 0.89.0 --arch x64",
     "build:debug": "cmake-js build --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp -D",
     "rebuild": "cmake-js rebuild --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp",
+    "rebuild:modern": "cmake-js rebuild --runtime nw --runtime-version 0.89.0 --arch x64",
     "clean": "cmake-js clean"
   },
   "keywords": [
