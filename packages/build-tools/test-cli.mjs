@@ -248,6 +248,13 @@ function testConfigValidProfiles() {
   test("lists prod profile", () => {
     assert(result.stdout.includes("prod"), "stdout should include 'prod'");
   });
+
+  test("output has 'Available profiles' header", () => {
+    assert(
+      result.stdout.includes("Available profiles"),
+      "stdout should include 'Available profiles' header"
+    );
+  });
 }
 
 function testConfigEmptyProfiles() {
@@ -454,6 +461,81 @@ function testReservedFlagWarning() {
   });
 }
 
+function testHelpFlag() {
+  console.log("\n--- --help flag ---");
+
+  const buildResult = runCli("build.js", ["--help"], __dirname);
+
+  test("build --help exits 0", () => {
+    assert(buildResult.status === 0, `expected exit 0, got ${buildResult.status}`);
+  });
+
+  test("build --help shows Usage", () => {
+    assert(buildResult.stdout.includes("Usage"), "output should include 'Usage'");
+  });
+
+  const runResult = runCli("run.js", ["--help"], __dirname);
+
+  test("run --help exits 0", () => {
+    assert(runResult.status === 0, `expected exit 0, got ${runResult.status}`);
+  });
+
+  test("run --help shows Usage", () => {
+    assert(runResult.stdout.includes("Usage"), "output should include 'Usage'");
+  });
+}
+
+function testVersionFlag() {
+  console.log("\n--- --version flag ---");
+
+  const semverPattern = /^\d+\.\d+\.\d+/;
+
+  const buildResult = runCli("build.js", ["--version"], __dirname);
+
+  test("build --version exits 0", () => {
+    assert(buildResult.status === 0, `expected exit 0, got ${buildResult.status}`);
+  });
+
+  test("build --version prints semver", () => {
+    const output = buildResult.stdout.trim();
+    assert(semverPattern.test(output), `expected semver, got: "${output}"`);
+  });
+
+  const runResult = runCli("run.js", ["--version"], __dirname);
+
+  test("run --version exits 0", () => {
+    assert(runResult.status === 0, `expected exit 0, got ${runResult.status}`);
+  });
+
+  test("run --version prints semver", () => {
+    const output = runResult.stdout.trim();
+    assert(semverPattern.test(output), `expected semver, got: "${output}"`);
+  });
+}
+
+function testRunList() {
+  console.log("\n--- run.js --list ---");
+
+  const dir = createTempProject("run-list", {
+    packageJson: { name: "test-app", version: "1.0.0" },
+    config: {
+      profiles: {
+        dev: { version: "0.89.0", flavor: "sdk", platforms: ["win64"] },
+      },
+    },
+  });
+
+  const result = runCli("run.js", ["--list"], dir);
+
+  test("run --list exits 0", () => {
+    assert(result.status === 0, `expected exit 0, got ${result.status}: ${result.stderr}`);
+  });
+
+  test("run --list shows dev profile", () => {
+    assert(result.stdout.includes("dev"), "stdout should include 'dev'");
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Run all tests
 // ---------------------------------------------------------------------------
@@ -476,6 +558,9 @@ try {
   await testPackageManagerDetection();
   await testWindowDeepMerge();
   testReservedFlagWarning();
+  testHelpFlag();
+  testVersionFlag();
+  testRunList();
 } finally {
   cleanup();
 }

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 export const EXIT_SUCCESS = 0;
 export const EXIT_FAILURE = 1;
@@ -9,6 +10,31 @@ export const JSON_INDENT_SPACES = 2;
 
 const PROCESS_ARGV_START_INDEX = 2;
 const args = process.argv.slice(PROCESS_ARGV_START_INDEX);
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export function readPackageVersion() {
+  const packageJsonPath = path.join(__dirname, "package.json");
+  const content = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+
+  return content.version;
+}
+
+export function printHelp(commandName) {
+  const lines = [
+    `Usage: ${commandName} [--profile-name] [options]`,
+    "",
+    "Options:",
+    "  --<profile>   Select a build profile (default: dev)",
+    "  --list        List available profiles",
+    "  --no-vite     Skip the Vite build step",
+    "  --legacy      Enable legacy browser support",
+    "  --help        Show this help message",
+    "  --version     Show version number",
+  ];
+
+  console.log(lines.join("\n"));
+}
 
 export function hasArgument(name) {
   const hasValue = args.includes(`--${name}`);
@@ -70,6 +96,7 @@ export function getProfileFromArgs(config) {
     }
   }
 
+  console.log(`No profile specified, using default: ${DEFAULT_PROFILE_NAME}`);
   return DEFAULT_PROFILE_NAME;
 }
 
@@ -110,7 +137,8 @@ export function listProfiles(config) {
     }
   }
 
-  console.log(names.join("\n"));
+  console.log("Available profiles:");
+  console.log(names.map((name) => `  ${name}`).join("\n"));
 }
 
 export function resolveLegacy(config) {

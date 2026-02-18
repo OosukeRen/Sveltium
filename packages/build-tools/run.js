@@ -12,8 +12,13 @@ import {
   listProfiles,
   resolveLegacy,
   detectPackageManager,
+  readPackageVersion,
+  printHelp,
 } from "./shared.js";
 
+const LIST_ARG_NAME = "list";
+const HELP_ARG_NAME = "help";
+const VERSION_ARG_NAME = "version";
 const NO_VITE_ARG_NAME = "no-vite";
 
 async function runProfile(profileName, config) {
@@ -58,6 +63,8 @@ async function runProfile(profileName, config) {
   writeAppPackageJson(distDir, config.app);
 
   try {
+    console.log(`Running with NW.js ${profile.version} (${profile.flavor})...`);
+
     await nwbuild({
       mode: "run",
       srcDir: distDir,
@@ -73,7 +80,23 @@ async function runProfile(profileName, config) {
 }
 
 async function main() {
+  if (hasArgument(HELP_ARG_NAME)) {
+    printHelp("sveltium-run");
+    process.exit(EXIT_SUCCESS);
+  }
+
+  if (hasArgument(VERSION_ARG_NAME)) {
+    console.log(readPackageVersion());
+    process.exit(EXIT_SUCCESS);
+  }
+
   const config = await loadConfig();
+
+  if (hasArgument(LIST_ARG_NAME)) {
+    listProfiles(config);
+    process.exit(EXIT_SUCCESS);
+  }
+
   const profileName = getProfileFromArgs(config);
   await runProfile(profileName, config);
   process.exit(EXIT_SUCCESS);

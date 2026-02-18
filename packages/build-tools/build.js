@@ -13,9 +13,13 @@ import {
   listProfiles,
   resolveLegacy,
   detectPackageManager,
+  readPackageVersion,
+  printHelp,
 } from "./shared.js";
 
 const LIST_ARG_NAME = "list";
+const HELP_ARG_NAME = "help";
+const VERSION_ARG_NAME = "version";
 const NO_VITE_ARG_NAME = "no-vite";
 
 const PLATFORM_ARCH_MAP = {
@@ -253,6 +257,9 @@ async function buildProfile(profileName, config) {
         continue;
       }
 
+      const targetLabel = `${target.platform}-${target.arch}`;
+      console.log(`Building ${targetLabel}...`);
+
       await nwbuild({
         mode: "build",
         srcDir: distDir,
@@ -265,6 +272,8 @@ async function buildProfile(profileName, config) {
         outDir: outputDir,
         app: appConfig,
       });
+
+      console.log(`Done: ${targetLabel} -> ${outputDir}`);
     }
   } catch (error) {
     console.error("Build failed:", error.message);
@@ -273,6 +282,16 @@ async function buildProfile(profileName, config) {
 }
 
 async function main() {
+  if (hasArgument(HELP_ARG_NAME)) {
+    printHelp("sveltium-build");
+    process.exit(EXIT_SUCCESS);
+  }
+
+  if (hasArgument(VERSION_ARG_NAME)) {
+    console.log(readPackageVersion());
+    process.exit(EXIT_SUCCESS);
+  }
+
   const config = await loadConfig();
 
   if (hasArgument(LIST_ARG_NAME)) {
