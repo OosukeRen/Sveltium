@@ -33,11 +33,11 @@ const PLATFORM_ARCH_MAP = {
 const PLATFORM_DIR_SEPARATOR = "-";
 const PACKAGE_NW_DIR_NAME = "package.nw";
 
-function ensureDir(dirPath) {
+export function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
-function copyDir(src, dest) {
+export function copyDir(src, dest) {
   ensureDir(dest);
 
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
@@ -46,13 +46,13 @@ function copyDir(src, dest) {
 
     if (entry.isDirectory()) {
       copyDir(srcPath, destPath);
-    } else if (entry.isFile()) {
+    } else if (entry.isFile() || entry.isSymbolicLink()) {
       fs.copyFileSync(srcPath, destPath);
     }
   }
 }
 
-function clearDirContents(dirPath) {
+export function clearDirContents(dirPath) {
   if (!fs.existsSync(dirPath)) {
     return;
   }
@@ -62,13 +62,13 @@ function clearDirContents(dirPath) {
 
     if (entry.isDirectory()) {
       fs.rmSync(entryPath, { recursive: true, force: true });
-    } else if (entry.isFile()) {
+    } else if (entry.isFile() || entry.isSymbolicLink()) {
       fs.rmSync(entryPath, { force: true });
     }
   }
 }
 
-function findAppBundle(outputDir) {
+export function findAppBundle(outputDir) {
   if (!fs.existsSync(outputDir)) {
     return null;
   }
@@ -77,12 +77,11 @@ function findAppBundle(outputDir) {
   return bundleName || null;
 }
 
-function hasNwRuntime(outputDir, platform) {
-  // Check for files that are always present in NW.js builds
-  // nw.exe gets renamed to app name, so check for other SDK files
+export function hasNwRuntime(outputDir, platform) {
+  // SDK-only markers (nwjc, chromedriver) plus common markers present in all flavors
   const markersByPlatform = {
-    win: ["nwjc.exe", "chromedriver.exe"],
-    linux: ["nwjc", "chromedriver"],
+    win: ["nwjc.exe", "chromedriver.exe", "icudtl.dat", "nw_elf.dll"],
+    linux: ["nwjc", "chromedriver", "icudtl.dat", "lib/libnw.so"],
   };
 
   // macOS: the .app bundle may be renamed, so check for any .app directory
@@ -132,8 +131,13 @@ function copyAppFiles(distDir, outputDir, platform) {
   }
 
   const targetDir = resolveAppTargetDir(outputDir, platform, appBundleName);
+  const isDedicatedAppDir = targetDir !== outputDir;
 
-  clearDirContents(targetDir);
+  // Only clear contents when target is a dedicated app directory (package.nw or app.nw)
+  // to avoid wiping NW.js runtime files when app files live alongside the runtime
+  if (isDedicatedAppDir) {
+    clearDirContents(targetDir);
+  }
 
   for (const entry of fs.readdirSync(distDir, { withFileTypes: true })) {
     const srcPath = path.join(distDir, entry.name);
@@ -145,13 +149,13 @@ function copyAppFiles(distDir, outputDir, platform) {
       }
 
       copyDir(srcPath, destPath);
-    } else if (entry.isFile()) {
+    } else if (entry.isFile() || entry.isSymbolicLink()) {
       fs.copyFileSync(srcPath, destPath);
     }
   }
 }
 
-function resolveTargets(platforms) {
+export function resolveTargets(platforms) {
   const targets = [];
   const platformList = platforms || [];
 
