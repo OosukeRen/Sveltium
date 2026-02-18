@@ -24,6 +24,14 @@ export function runCommand(command, commandArgs, cwd, env = {}) {
     env: { ...process.env, ...env },
   });
 
+  if (result.error) {
+    console.error(`Failed to run "${command}": ${result.error.message}`);
+  }
+
+  if (result.signal) {
+    console.error(`"${command}" was terminated by signal: ${result.signal}`);
+  }
+
   if (result.status !== EXIT_SUCCESS) {
     const exitCode = result.status || EXIT_FAILURE;
     process.exit(exitCode);

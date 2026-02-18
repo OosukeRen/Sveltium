@@ -54,6 +54,10 @@ function copyDir(src, dest) {
 }
 
 function clearDirContents(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    return;
+  }
+
   for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
     const entryPath = path.join(dirPath, entry.name);
 
@@ -186,6 +190,23 @@ async function buildProfile(profileName, config) {
     process.exit(EXIT_FAILURE);
   }
 
+  if (!profile.version) {
+    console.error(`Profile "${profileName}" is missing required field: version`);
+    process.exit(EXIT_FAILURE);
+  }
+
+  if (!profile.flavor) {
+    console.error(`Profile "${profileName}" is missing required field: flavor`);
+    process.exit(EXIT_FAILURE);
+  }
+
+  const hasPlatforms = Array.isArray(profile.platforms) && profile.platforms.length > 0;
+
+  if (!hasPlatforms) {
+    console.error(`Profile "${profileName}" has no platforms defined.`);
+    process.exit(EXIT_FAILURE);
+  }
+
   if (!hasArgument(NO_VITE_ARG_NAME)) {
     const buildEnv = {};
     const legacyEnabled = resolveLegacy(config);
@@ -246,7 +267,7 @@ async function buildProfile(profileName, config) {
       });
     }
   } catch (error) {
-    console.error(error);
+    console.error("Build failed:", error.message);
     process.exit(EXIT_FAILURE);
   }
 }
@@ -263,4 +284,7 @@ async function main() {
   await buildProfile(profileName, config);
 }
 
-main();
+main().catch((error) => {
+  console.error("Build failed:", error.message);
+  process.exit(EXIT_FAILURE);
+});

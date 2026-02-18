@@ -272,6 +272,100 @@ function testConfigEmptyProfiles() {
   });
 }
 
+function testProfileMissingVersion() {
+  console.log("\n--- profile: missing version ---");
+
+  const dir = createTempProject("no-version", {
+    packageJson: { name: "test-app", version: "1.0.0" },
+    config: {
+      profiles: {
+        dev: { flavor: "sdk", platforms: ["win64"] },
+      },
+    },
+  });
+
+  const buildResult = runCli("build.js", ["--no-vite"], dir);
+
+  test("build exits non-zero", () => {
+    assert(buildResult.status !== 0, `expected non-zero exit, got ${buildResult.status}`);
+  });
+
+  test("build mentions missing version", () => {
+    const output = buildResult.stdout + buildResult.stderr;
+    assert(output.includes("version"), "output should mention 'version'");
+  });
+
+  const runResult = runCli("run.js", ["--no-vite"], dir);
+
+  test("run exits non-zero", () => {
+    assert(runResult.status !== 0, `expected non-zero exit, got ${runResult.status}`);
+  });
+
+  test("run mentions missing version", () => {
+    const output = runResult.stdout + runResult.stderr;
+    assert(output.includes("version"), "output should mention 'version'");
+  });
+}
+
+function testProfileMissingFlavor() {
+  console.log("\n--- profile: missing flavor ---");
+
+  const dir = createTempProject("no-flavor", {
+    packageJson: { name: "test-app", version: "1.0.0" },
+    config: {
+      profiles: {
+        dev: { version: "0.89.0", platforms: ["win64"] },
+      },
+    },
+  });
+
+  const buildResult = runCli("build.js", ["--no-vite"], dir);
+
+  test("build exits non-zero", () => {
+    assert(buildResult.status !== 0, `expected non-zero exit, got ${buildResult.status}`);
+  });
+
+  test("build mentions missing flavor", () => {
+    const output = buildResult.stdout + buildResult.stderr;
+    assert(output.includes("flavor"), "output should mention 'flavor'");
+  });
+
+  const runResult = runCli("run.js", ["--no-vite"], dir);
+
+  test("run exits non-zero", () => {
+    assert(runResult.status !== 0, `expected non-zero exit, got ${runResult.status}`);
+  });
+
+  test("run mentions missing flavor", () => {
+    const output = runResult.stdout + runResult.stderr;
+    assert(output.includes("flavor"), "output should mention 'flavor'");
+  });
+}
+
+function testProfileEmptyPlatforms() {
+  console.log("\n--- profile: empty platforms ---");
+
+  const dir = createTempProject("empty-platforms", {
+    packageJson: { name: "test-app", version: "1.0.0" },
+    config: {
+      profiles: {
+        dev: { version: "0.89.0", flavor: "sdk", platforms: [] },
+      },
+    },
+  });
+
+  const result = runCli("build.js", ["--no-vite"], dir);
+
+  test("build exits non-zero", () => {
+    assert(result.status !== 0, `expected non-zero exit, got ${result.status}`);
+  });
+
+  test("build mentions no platforms", () => {
+    const output = result.stdout + result.stderr;
+    assert(output.includes("platforms"), "output should mention 'platforms'");
+  });
+}
+
 async function testPackageManagerDetection() {
   console.log("\n--- package manager detection ---");
 
@@ -320,6 +414,9 @@ try {
   testConfigMalformed();
   testConfigValidProfiles();
   testConfigEmptyProfiles();
+  testProfileMissingVersion();
+  testProfileMissingFlavor();
+  testProfileEmptyPlatforms();
   await testPackageManagerDetection();
 } finally {
   cleanup();

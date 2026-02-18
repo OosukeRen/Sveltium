@@ -25,6 +25,16 @@ async function runProfile(profileName, config) {
     process.exit(EXIT_FAILURE);
   }
 
+  if (!profile.version) {
+    console.error(`Profile "${profileName}" is missing required field: version`);
+    process.exit(EXIT_FAILURE);
+  }
+
+  if (!profile.flavor) {
+    console.error(`Profile "${profileName}" is missing required field: flavor`);
+    process.exit(EXIT_FAILURE);
+  }
+
   if (!hasArgument(NO_VITE_ARG_NAME)) {
     const buildEnv = {};
     const legacyEnabled = resolveLegacy(config);
@@ -57,7 +67,7 @@ async function runProfile(profileName, config) {
       cacheDir: config.build.cacheDir,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Run failed:", error.message);
     process.exit(EXIT_FAILURE);
   }
 }
@@ -69,4 +79,7 @@ async function main() {
   process.exit(EXIT_SUCCESS);
 }
 
-main();
+main().catch((error) => {
+  console.error("Run failed:", error.message);
+  process.exit(EXIT_FAILURE);
+});
