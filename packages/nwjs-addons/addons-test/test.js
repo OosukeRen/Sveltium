@@ -310,10 +310,10 @@ function ipcSend() {
     }
   } else if (ipcServer) {
     try {
-      ipcServer.broadcast(message);
-      log('IPC Server broadcast: ' + message, 'success');
+      ipcServer.send(message);
+      log('IPC Server sent: ' + message, 'success');
     } catch (err) {
-      log('IPC Broadcast failed: ' + err.message, 'error');
+      log('IPC Send failed: ' + err.message, 'error');
     }
   } else {
     log('No IPC connection active', 'warn');
