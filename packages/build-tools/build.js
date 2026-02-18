@@ -7,20 +7,18 @@ import {
   EXIT_SUCCESS,
   EXIT_FAILURE,
   hasArgument,
-  runCommand,
   writeAppPackageJson,
   getProfileFromArgs,
   listProfiles,
-  resolveLegacy,
-  detectPackageManager,
   readPackageVersion,
   printHelp,
+  runViteBuild,
+  validateDistDir,
 } from "./shared.js";
 
 const LIST_ARG_NAME = "list";
 const HELP_ARG_NAME = "help";
 const VERSION_ARG_NAME = "version";
-const NO_VITE_ARG_NAME = "no-vite";
 
 const PLATFORM_ARCH_MAP = {
   win32: { platform: "win", arch: "ia32" },
@@ -48,10 +46,7 @@ function copyDir(src, dest) {
 
     if (entry.isDirectory()) {
       copyDir(srcPath, destPath);
-      continue;
-    }
-
-    if (entry.isFile()) {
+    } else if (entry.isFile()) {
       fs.copyFileSync(srcPath, destPath);
     }
   }
@@ -67,22 +62,19 @@ function clearDirContents(dirPath) {
 
     if (entry.isDirectory()) {
       fs.rmSync(entryPath, { recursive: true, force: true });
-      continue;
-    }
-
-    if (entry.isFile()) {
+    } else if (entry.isFile()) {
       fs.rmSync(entryPath, { force: true });
     }
   }
 }
 
-function hasAppBundle(outputDir) {
+function findAppBundle(outputDir) {
   if (!fs.existsSync(outputDir)) {
-    return false;
+    return null;
   }
 
-  const appBundle = fs.readdirSync(outputDir).find((entry) => entry.endsWith(".app"));
-  return Boolean(appBundle);
+  const bundleName = fs.readdirSync(outputDir).find((entry) => entry.endsWith(".app"));
+  return bundleName || null;
 }
 
 function hasNwRuntime(outputDir, platform) {
@@ -95,7 +87,7 @@ function hasNwRuntime(outputDir, platform) {
 
   // macOS: the .app bundle may be renamed, so check for any .app directory
   if (platform === "osx") {
-    return hasAppBundle(outputDir);
+    return findAppBundle(outputDir) !== null;
   }
 
   const markers = markersByPlatform[platform] || [];
@@ -109,27 +101,19 @@ function hasNwRuntime(outputDir, platform) {
   return false;
 }
 
-function resolveAppTargetDir(outputDir, platform) {
+function resolveAppTargetDir(outputDir, platform, appBundleName) {
   let targetDir = outputDir;
 
   if (platform === "osx") {
-    // Find the .app bundle
-    const appBundle = fs.readdirSync(outputDir).find((f) => f.endsWith(".app"));
-
-    if (appBundle) {
-      targetDir = path.join(outputDir, appBundle, "Contents", "Resources", "app.nw");
+    if (appBundleName) {
+      targetDir = path.join(outputDir, appBundleName, "Contents", "Resources", "app.nw");
     }
   } else {
     const packageDir = path.join(outputDir, PACKAGE_NW_DIR_NAME);
-    const packageDirExists = fs.existsSync(packageDir);
+    const isPackageDir = fs.existsSync(packageDir) && fs.statSync(packageDir).isDirectory();
 
-    if (packageDirExists) {
-      const packageDirStats = fs.statSync(packageDir);
-      const isPackageDir = packageDirStats.isDirectory();
-
-      if (isPackageDir) {
-        targetDir = packageDir;
-      }
+    if (isPackageDir) {
+      targetDir = packageDir;
     }
   }
 
@@ -140,14 +124,14 @@ function copyAppFiles(distDir, outputDir, platform) {
   // On Windows/Linux, app files usually go into package.nw when it exists
   // On macOS, they go inside the .app bundle's Resources/app.nw
   const isMacOS = platform === "osx";
-  const macOSBundleMissing = isMacOS && !hasAppBundle(outputDir);
+  const appBundleName = isMacOS ? findAppBundle(outputDir) : null;
+  const macOSBundleMissing = isMacOS && !appBundleName;
 
   if (macOSBundleMissing) {
-    console.error(`No .app bundle found in ${outputDir}. Cannot copy app files.`);
-    process.exit(EXIT_FAILURE);
+    throw new Error(`No .app bundle found in ${outputDir}. Cannot copy app files.`);
   }
 
-  const targetDir = resolveAppTargetDir(outputDir, platform);
+  const targetDir = resolveAppTargetDir(outputDir, platform, appBundleName);
 
   clearDirContents(targetDir);
 
@@ -211,25 +195,10 @@ async function buildProfile(profileName, config) {
     process.exit(EXIT_FAILURE);
   }
 
-  if (!hasArgument(NO_VITE_ARG_NAME)) {
-    const buildEnv = {};
-    const legacyEnabled = resolveLegacy(config);
-
-    if (legacyEnabled) {
-      buildEnv.LEGACY = "true";
-    }
-
-    const packageManager = detectPackageManager(process.cwd());
-    runCommand(packageManager, ["run", "build"], process.cwd(), buildEnv);
-  }
+  runViteBuild(config);
 
   const distDir = config.build.distDir;
-
-  if (!fs.existsSync(distDir)) {
-    console.error(`Missing dist folder: ${distDir}`);
-    console.error("Run `npm run build` first or skip with --no-vite.");
-    process.exit(EXIT_FAILURE);
-  }
+  validateDistDir(distDir);
 
   writeAppPackageJson(distDir, config.app);
   ensureDir(config.build.cacheDir);
@@ -301,6 +270,7 @@ async function main() {
 
   const profileName = getProfileFromArgs(config);
   await buildProfile(profileName, config);
+  process.exit(EXIT_SUCCESS);
 }
 
 main().catch((error) => {

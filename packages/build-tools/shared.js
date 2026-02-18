@@ -37,9 +37,9 @@ export function printHelp(commandName) {
 }
 
 export function hasArgument(name) {
-  const hasValue = args.includes(`--${name}`);
+  const isPresent = args.includes(`--${name}`);
 
-  return hasValue;
+  return isPresent;
 }
 
 export function runCommand(command, commandArgs, cwd, env = {}) {
@@ -142,8 +142,36 @@ export function listProfiles(config) {
 }
 
 export function resolveLegacy(config) {
-  const legacyFromCli = hasArgument("legacy");
-  const legacyEnabled = legacyFromCli || config.enableLegacy;
+  const cliLegacyFlag = hasArgument("legacy");
+  const legacyEnabled = cliLegacyFlag || config.enableLegacy;
 
   return legacyEnabled;
+}
+
+export function runViteBuild(config) {
+  const skipVite = hasArgument("no-vite");
+
+  if (skipVite) {
+    return;
+  }
+
+  const buildEnv = {};
+  const legacyEnabled = resolveLegacy(config);
+
+  if (legacyEnabled) {
+    buildEnv.LEGACY = "true";
+  }
+
+  const packageManager = detectPackageManager(process.cwd());
+  runCommand(packageManager, ["run", "build"], process.cwd(), buildEnv);
+}
+
+export function validateDistDir(distDir) {
+  const distExists = fs.existsSync(distDir);
+
+  if (!distExists) {
+    console.error(`Missing dist folder: ${distDir}`);
+    console.error("Run `npm run build` first or skip with --no-vite.");
+    process.exit(EXIT_FAILURE);
+  }
 }
