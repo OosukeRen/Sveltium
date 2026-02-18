@@ -28,9 +28,27 @@ function generateConfigContent(options) {
  */
 
 /**
+ * @typedef {Object} AppConfig
+ * @property {string} [name] - App name (defaults to package.json name)
+ * @property {string} [version] - App version (defaults to package.json version)
+ * @property {string} [main] - Main entry file (defaults to 'index.html')
+ * @property {{title?: string, width?: number, height?: number}} [window] - NW.js window options
+ * @property {string} [icon] - Path to app icon
+ */
+
+/**
+ * @typedef {Object} BuildConfig
+ * @property {string} [distDir] - Vite output directory (defaults to 'dist')
+ * @property {string} [cacheDir] - NW.js cache directory (defaults to 'nw_cache')
+ * @property {string} [outputDir] - Build output directory (defaults to 'builds')
+ */
+
+/**
  * @typedef {Object} SveltiumConfig
  * @property {boolean} enableLegacy - Enable legacy browser support (Chrome 40)
  * @property {Record<string, BuildProfile>} profiles - Build profiles
+ * @property {AppConfig} [app] - Override app defaults (optional)
+ * @property {BuildConfig} [build] - Override build paths (optional)
  */
 
 /** @type {SveltiumConfig} */

@@ -55,9 +55,10 @@ const ESLINT_DEV_DEPENDENCIES = {
 
 /**
  * AutoGeneration devDependencies
- * Note: @sveltium/build-tools will be added once published to npm
  */
-const AUTO_GENERATION_DEV_DEPENDENCIES = {}
+const AUTO_GENERATION_DEV_DEPENDENCIES = {
+  '@sveltium/build-tools': '^0.1.0',
+}
 
 /**
  * Build scripts object based on options

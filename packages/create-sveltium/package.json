@@ -23,6 +23,9 @@
     "create",
     "cli"
   ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
