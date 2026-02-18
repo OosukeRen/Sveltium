@@ -72,8 +72,8 @@ list(APPEND SOURCES ${RSSPARSER_SRC})
 file(GLOB SDL2INPUT_SRC "sdl2-input/src/*.cpp")
 list(APPEND SOURCES ${SDL2INPUT_SRC})
 include_directories("sdl2-input/src")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../temp/vendored/SDL2/include")
-link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../temp/vendored/SDL2/build-xp/Release")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/sdl2-input/vendor/SDL2/include")
+link_directories("${CMAKE_CURRENT_SOURCE_DIR}/sdl2-input/vendor/SDL2/lib")
 
 # Single combined addon
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
