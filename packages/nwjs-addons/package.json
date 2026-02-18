@@ -17,6 +17,9 @@
   },
   "files": [
     "index.js",
+    "install.js",
+    "CMakeLists.txt",
+    "src",
     "clipboard",
     "folder-dialog",
     "ipc",
@@ -29,7 +32,7 @@
     "build"
   ],
   "scripts": {
-    "install": "cmake-js compile --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp",
+    "install": "node install.js",
     "build": "cmake-js build --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp",
     "build:debug": "cmake-js build --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp -D",
     "rebuild": "cmake-js rebuild --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp",
@@ -68,10 +71,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/user/nwjs-addons.git"
-  },
-  "dependencies": {
-    "bindings": "^1.5.0"
+    "url": "https://github.com/OosukeRen/Sveltium",
+    "directory": "packages/nwjs-addons"
   },
   "devDependencies": {
     "cmake-js": "4.0.0",
