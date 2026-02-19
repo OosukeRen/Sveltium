@@ -1,28 +1,27 @@
-#include <nan.h>
+#include "addon_api.h"
 #include "tcc_addon.h"
 #include "jsbridge_impl.h"
-
-using namespace v8;
+#include <cstring>
 
 // Weak reference so we don't prevent GC
-class CompiledModuleWrap : public Nan::ObjectWrap {
+class CompiledModuleWrap : public ADDON_OBJECT_WRAP {
 public:
-  static void Init(Local<Object> exports);
-  static NAN_METHOD(New);
-  static NAN_METHOD(SetLibPath);
-  static NAN_METHOD(AddIncludePath);
-  static NAN_METHOD(AddLibraryPath);
-  static NAN_METHOD(AddLibrary);
-  static NAN_METHOD(Define);
-  static NAN_METHOD(Undefine);
-  static NAN_METHOD(Compile);
-  static NAN_METHOD(CompileFile);
-  static NAN_METHOD(GetSymbol);
-  static NAN_METHOD(GetFunction);
-  static NAN_METHOD(GetError);
-  static NAN_METHOD(Release);
+  static void Init(ADDON_INIT_PARAMS);
+  static ADDON_METHOD(New);
+  static ADDON_METHOD(SetLibPath);
+  static ADDON_METHOD(AddIncludePath);
+  static ADDON_METHOD(AddLibraryPath);
+  static ADDON_METHOD(AddLibrary);
+  static ADDON_METHOD(Define);
+  static ADDON_METHOD(Undefine);
+  static ADDON_METHOD(Compile);
+  static ADDON_METHOD(CompileFile);
+  static ADDON_METHOD(GetSymbol);
+  static ADDON_METHOD(GetFunction);
+  static ADDON_METHOD(GetError);
+  static ADDON_METHOD(Release);
 
-  static Nan::Persistent<Function> constructor;
+  static ADDON_PERSISTENT_FUNCTION constructor;
 
   tinycc::CompiledModule* module_;
   jsbridge::Context* jsctx_;
@@ -41,173 +40,188 @@ private:
   }
 };
 
-Nan::Persistent<Function> CompiledModuleWrap::constructor;
+ADDON_PERSISTENT_FUNCTION CompiledModuleWrap::constructor;
 
-void CompiledModuleWrap::Init(Local<Object> exports) {
-  Nan::HandleScope scope;
+void CompiledModuleWrap::Init(ADDON_INIT_PARAMS) {
+  ADDON_HANDLE_SCOPE();
 
   // Constructor template
-  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(New);
-  tpl->SetClassName(Nan::New("Compiler").ToLocalChecked());
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+  auto tpl = ADDON_NEW_CTOR_TEMPLATE_WITH(New);
+  ADDON_SET_CLASS_NAME(tpl, "Compiler");
+  ADDON_SET_INTERNAL_FIELD_COUNT(tpl, 1);
 
   // Methods
-  Nan::SetPrototypeMethod(tpl, "setLibPath", SetLibPath);
-  Nan::SetPrototypeMethod(tpl, "addIncludePath", AddIncludePath);
-  Nan::SetPrototypeMethod(tpl, "addLibraryPath", AddLibraryPath);
-  Nan::SetPrototypeMethod(tpl, "addLibrary", AddLibrary);
-  Nan::SetPrototypeMethod(tpl, "define", Define);
-  Nan::SetPrototypeMethod(tpl, "undefine", Undefine);
-  Nan::SetPrototypeMethod(tpl, "compile", Compile);
-  Nan::SetPrototypeMethod(tpl, "compileFile", CompileFile);
-  Nan::SetPrototypeMethod(tpl, "getSymbol", GetSymbol);
-  Nan::SetPrototypeMethod(tpl, "getFunction", GetFunction);
-  Nan::SetPrototypeMethod(tpl, "getError", GetError);
-  Nan::SetPrototypeMethod(tpl, "release", Release);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "setLibPath", SetLibPath);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "addIncludePath", AddIncludePath);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "addLibraryPath", AddLibraryPath);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "addLibrary", AddLibrary);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "define", Define);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "undefine", Undefine);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "compile", Compile);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "compileFile", CompileFile);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "getSymbol", GetSymbol);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "getFunction", GetFunction);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "getError", GetError);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "release", Release);
 
-  constructor.Reset(tpl->GetFunction());
-  exports->Set(Nan::New("Compiler").ToLocalChecked(), tpl->GetFunction());
+  ADDON_PERSISTENT_RESET(constructor, ADDON_GET_CTOR_FUNCTION(tpl));
+  ADDON_SET(exports, "Compiler", ADDON_GET_CTOR_FUNCTION(tpl));
 }
 
-NAN_METHOD(CompiledModuleWrap::New) {
-  if (info.IsConstructCall()) {
+ADDON_METHOD(CompiledModuleWrap::New) {
+  ADDON_ENV;
+  if (ADDON_IS_CONSTRUCT_CALL()) {
     CompiledModuleWrap* obj = new CompiledModuleWrap();
     obj->module_ = tinycc::createCompiler();
     obj->jsctx_ = new jsbridge::Context();
-    obj->Wrap(info.This());
-    info.GetReturnValue().Set(info.This());
-  } else {
-    // Invoked as plain function, turn into construct call
-    Local<Function> cons = Nan::New(constructor);
-    info.GetReturnValue().Set(Nan::NewInstance(cons).ToLocalChecked());
+    obj->Wrap(ADDON_THIS());
+    ADDON_RETURN(ADDON_THIS());
   }
+
+  // Invoked as plain function, turn into construct call
+  auto cons = ADDON_PERSISTENT_GET(constructor);
+  ADDON_RETURN(ADDON_NEW_INSTANCE(cons));
 }
 
-NAN_METHOD(CompiledModuleWrap::SetLibPath) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::SetLibPath) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Path must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Path must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String path(info[0]);
-  obj->module_->setLibPath(*path);
+  ADDON_UTF8(path, ADDON_ARG(0));
+  obj->module_->setLibPath(ADDON_UTF8_VALUE(path));
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(CompiledModuleWrap::AddIncludePath) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::AddIncludePath) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Path must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Path must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String path(info[0]);
-  obj->module_->addIncludePath(*path);
+  ADDON_UTF8(path, ADDON_ARG(0));
+  obj->module_->addIncludePath(ADDON_UTF8_VALUE(path));
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(CompiledModuleWrap::AddLibraryPath) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::AddLibraryPath) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Path must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Path must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String path(info[0]);
-  obj->module_->addLibraryPath(*path);
+  ADDON_UTF8(path, ADDON_ARG(0));
+  obj->module_->addLibraryPath(ADDON_UTF8_VALUE(path));
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(CompiledModuleWrap::AddLibrary) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::AddLibrary) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Library name must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Library name must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String name(info[0]);
-  obj->module_->addLibrary(*name);
+  ADDON_UTF8(name, ADDON_ARG(0));
+  obj->module_->addLibrary(ADDON_UTF8_VALUE(name));
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(CompiledModuleWrap::Define) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::Define) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Macro name must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Macro name must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String name(info[0]);
+  ADDON_UTF8(name, ADDON_ARG(0));
   std::string value = "";
 
-  if (info.Length() >= 2 && info[1]->IsString()) {
-    Nan::Utf8String val(info[1]);
-    value = *val;
+  if (ADDON_ARG_COUNT() >= 2 && ADDON_IS_STRING(ADDON_ARG(1))) {
+    ADDON_UTF8(val, ADDON_ARG(1));
+    value = ADDON_UTF8_VALUE(val);
   }
 
-  obj->module_->define(*name, value);
+  obj->module_->define(ADDON_UTF8_VALUE(name), value);
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(CompiledModuleWrap::Undefine) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::Undefine) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Macro name must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Macro name must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String name(info[0]);
-  obj->module_->undefine(*name);
+  ADDON_UTF8(name, ADDON_ARG(0));
+  obj->module_->undefine(ADDON_UTF8_VALUE(name));
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(CompiledModuleWrap::Compile) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::Compile) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Code must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Code must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String code(info[0]);
-  bool success = obj->module_->compile(*code);
+  ADDON_UTF8(code, ADDON_ARG(0));
+  bool success = obj->module_->compile(ADDON_UTF8_VALUE(code));
 
-  info.GetReturnValue().Set(Nan::New<Boolean>(success));
+  ADDON_RETURN(ADDON_BOOLEAN(success));
 }
 
-NAN_METHOD(CompiledModuleWrap::CompileFile) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::CompileFile) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Path must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Path must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String path(info[0]);
-  bool success = obj->module_->compileFile(*path);
+  ADDON_UTF8(path, ADDON_ARG(0));
+  bool success = obj->module_->compileFile(ADDON_UTF8_VALUE(path));
 
-  info.GetReturnValue().Set(Nan::New<Boolean>(success));
+  ADDON_RETURN(ADDON_BOOLEAN(success));
 }
 
-NAN_METHOD(CompiledModuleWrap::GetSymbol) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::GetSymbol) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Symbol name must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Symbol name must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String name(info[0]);
-  void* sym = obj->module_->getSymbol(*name);
+  ADDON_UTF8(name, ADDON_ARG(0));
+  void* sym = obj->module_->getSymbol(ADDON_UTF8_VALUE(name));
 
   if (sym == NULL) {
-    info.GetReturnValue().Set(Nan::Null());
-    return;
+    ADDON_RETURN_NULL();
   }
 
   // Return as number (pointer address)
-  info.GetReturnValue().Set(Nan::New<Number>(reinterpret_cast<uintptr_t>(sym)));
+  ADDON_RETURN(ADDON_NUMBER(reinterpret_cast<uintptr_t>(sym)));
 }
 
 // Type enumeration for native function signatures
@@ -240,14 +254,14 @@ static NativeType parseType(const std::string& typeStr) {
 }
 
 // Function wrapper for calling native functions from JS
-class NativeFunctionWrap : public Nan::ObjectWrap {
+class NativeFunctionWrap : public ADDON_OBJECT_WRAP {
 public:
   // Create with jsbridge mode (legacy)
-  static Local<Object> Create(void* funcPtr, jsbridge::Context* jsctx, int argCount);
+  static ADDON_OBJECT_TYPE Create(void* funcPtr, jsbridge::Context* jsctx, int argCount);
   // Create with native type signature
-  static Local<Object> CreateTyped(void* funcPtr, jsbridge::Context* jsctx,
-                                   NativeType returnType, const std::vector<NativeType>& argTypes);
-  static NAN_METHOD(Call);
+  static ADDON_OBJECT_TYPE CreateTyped(void* funcPtr, jsbridge::Context* jsctx,
+                                       NativeType returnType, const std::vector<NativeType>& argTypes);
+  static ADDON_METHOD(Call);
 
   void* funcPtr_;
   jsbridge::Context* jsctx_;
@@ -261,16 +275,16 @@ private:
     : funcPtr_(NULL), jsctx_(NULL), argCount_(0), useJsbridge_(true), returnType_(NTYPE_VOID) {}
 };
 
-Local<Object> NativeFunctionWrap::Create(void* funcPtr, jsbridge::Context* jsctx, int argCount) {
-  Nan::EscapableHandleScope scope;
+ADDON_OBJECT_TYPE NativeFunctionWrap::Create(void* funcPtr, jsbridge::Context* jsctx, int argCount) {
+  ADDON_ESCAPABLE_SCOPE();
 
-  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>();
-  tpl->SetClassName(Nan::New("NativeFunction").ToLocalChecked());
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+  auto tpl = ADDON_NEW_CTOR_TEMPLATE();
+  ADDON_SET_CLASS_NAME(tpl, "NativeFunction");
+  ADDON_SET_INTERNAL_FIELD_COUNT(tpl, 1);
 
-  Nan::SetPrototypeMethod(tpl, "call", Call);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "call", Call);
 
-  Local<Object> instance = tpl->InstanceTemplate()->NewInstance();
+  ADDON_OBJECT_TYPE instance = ADDON_TEMPLATE_NEW_INSTANCE(tpl);
 
   NativeFunctionWrap* wrap = new NativeFunctionWrap();
   wrap->funcPtr_ = funcPtr;
@@ -279,21 +293,21 @@ Local<Object> NativeFunctionWrap::Create(void* funcPtr, jsbridge::Context* jsctx
   wrap->useJsbridge_ = true;
   wrap->Wrap(instance);
 
-  return scope.Escape(instance);
+  return ADDON_ESCAPE(instance);
 }
 
-Local<Object> NativeFunctionWrap::CreateTyped(void* funcPtr, jsbridge::Context* jsctx,
-                                              NativeType returnType,
-                                              const std::vector<NativeType>& argTypes) {
-  Nan::EscapableHandleScope scope;
+ADDON_OBJECT_TYPE NativeFunctionWrap::CreateTyped(void* funcPtr, jsbridge::Context* jsctx,
+                                                  NativeType returnType,
+                                                  const std::vector<NativeType>& argTypes) {
+  ADDON_ESCAPABLE_SCOPE();
 
-  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>();
-  tpl->SetClassName(Nan::New("NativeFunction").ToLocalChecked());
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+  auto tpl = ADDON_NEW_CTOR_TEMPLATE();
+  ADDON_SET_CLASS_NAME(tpl, "NativeFunction");
+  ADDON_SET_INTERNAL_FIELD_COUNT(tpl, 1);
 
-  Nan::SetPrototypeMethod(tpl, "call", Call);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "call", Call);
 
-  Local<Object> instance = tpl->InstanceTemplate()->NewInstance();
+  ADDON_OBJECT_TYPE instance = ADDON_TEMPLATE_NEW_INSTANCE(tpl);
 
   NativeFunctionWrap* wrap = new NativeFunctionWrap();
   wrap->funcPtr_ = funcPtr;
@@ -304,22 +318,24 @@ Local<Object> NativeFunctionWrap::CreateTyped(void* funcPtr, jsbridge::Context* 
   wrap->argTypes_ = argTypes;
   wrap->Wrap(instance);
 
-  return scope.Escape(instance);
+  return ADDON_ESCAPE(instance);
 }
 
+// Slot size matches register width: 4 bytes on x86, 8 bytes on x64
+typedef uintptr_t tcc_slot_t;
+
 // Native type call implementation using cdecl calling convention
-// Builds a stack of uint32 slots and calls through typed function pointers
-static uint32_t callNativeFunction(void* funcPtr, const std::vector<uint32_t>& stack, size_t slotCount) {
-  // Cdecl function pointer types
-  typedef uint32_t (*fn0_t)();
-  typedef uint32_t (*fn1_t)(uint32_t);
-  typedef uint32_t (*fn2_t)(uint32_t, uint32_t);
-  typedef uint32_t (*fn3_t)(uint32_t, uint32_t, uint32_t);
-  typedef uint32_t (*fn4_t)(uint32_t, uint32_t, uint32_t, uint32_t);
-  typedef uint32_t (*fn5_t)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-  typedef uint32_t (*fn6_t)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-  typedef uint32_t (*fn7_t)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-  typedef uint32_t (*fn8_t)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+// Builds a stack of register-width slots and calls through typed function pointers
+static tcc_slot_t callNativeFunction(void* funcPtr, const std::vector<tcc_slot_t>& stack, size_t slotCount) {
+  typedef tcc_slot_t (*fn0_t)();
+  typedef tcc_slot_t (*fn1_t)(tcc_slot_t);
+  typedef tcc_slot_t (*fn2_t)(tcc_slot_t, tcc_slot_t);
+  typedef tcc_slot_t (*fn3_t)(tcc_slot_t, tcc_slot_t, tcc_slot_t);
+  typedef tcc_slot_t (*fn4_t)(tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t);
+  typedef tcc_slot_t (*fn5_t)(tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t);
+  typedef tcc_slot_t (*fn6_t)(tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t);
+  typedef tcc_slot_t (*fn7_t)(tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t);
+  typedef tcc_slot_t (*fn8_t)(tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t, tcc_slot_t);
 
   switch (slotCount) {
     case 0: return ((fn0_t)funcPtr)();
@@ -334,57 +350,71 @@ static uint32_t callNativeFunction(void* funcPtr, const std::vector<uint32_t>& s
   }
 }
 
-NAN_METHOD(NativeFunctionWrap::Call) {
-  NativeFunctionWrap* wrap = Nan::ObjectWrap::Unwrap<NativeFunctionWrap>(info.Holder());
+ADDON_METHOD(NativeFunctionWrap::Call) {
+  ADDON_ENV;
+  NativeFunctionWrap* wrap = ADDON_UNWRAP(NativeFunctionWrap, ADDON_HOLDER());
 
   if (!wrap->funcPtr_ || !wrap->jsctx_) {
-    Nan::ThrowError("Function not initialized");
-    return;
+    ADDON_THROW_ERROR("Function not initialized");
+    ADDON_VOID_RETURN();
   }
 
   // Native types mode - convert JS args to C types, call, convert result back
   if (!wrap->useJsbridge_) {
-    std::vector<uint32_t> stack;
+    std::vector<tcc_slot_t> stack;
     std::vector<std::string> stringArgs;  // Keep strings alive
 
     // Convert each argument based on declared type
     for (size_t i = 0; i < wrap->argTypes_.size(); i++) {
-      Local<Value> arg = (i < static_cast<size_t>(info.Length())) ? info[i] : Nan::Undefined();
+      ADDON_VALUE arg = (i < static_cast<size_t>(ADDON_ARG_COUNT())) ? ADDON_ARG(i) : ADDON_UNDEFINED();
 
       switch (wrap->argTypes_[i]) {
         case NTYPE_INT32:
         case NTYPE_UINT32:
-          stack.push_back(static_cast<uint32_t>(Nan::To<int32_t>(arg).FromMaybe(0)));
+          stack.push_back(static_cast<tcc_slot_t>(ADDON_TO_INT32_DEFAULT(arg, 0)));
           break;
 
         case NTYPE_INT64:
         case NTYPE_UINT64: {
-          // 64-bit: push as two 32-bit slots (low, high)
-          int64_t val = static_cast<int64_t>(Nan::To<double>(arg).FromMaybe(0.0));
-          stack.push_back(static_cast<uint32_t>(val & 0xFFFFFFFF));
-          stack.push_back(static_cast<uint32_t>((val >> 32) & 0xFFFFFFFF));
+          int64_t val = static_cast<int64_t>(ADDON_TO_DOUBLE_DEFAULT(arg, 0.0));
+#ifdef _WIN64
+          // On x64, 64-bit values fit in a single register-width slot
+          stack.push_back(static_cast<tcc_slot_t>(val));
+#else
+          // On x86, 64-bit values need two 32-bit slots (low, high)
+          stack.push_back(static_cast<tcc_slot_t>(val & 0xFFFFFFFF));
+          stack.push_back(static_cast<tcc_slot_t>((val >> 32) & 0xFFFFFFFF));
+#endif
           break;
         }
 
         case NTYPE_FLOAT: {
-          float f = static_cast<float>(Nan::To<double>(arg).FromMaybe(0.0));
-          stack.push_back(*reinterpret_cast<uint32_t*>(&f));
+          float f = static_cast<float>(ADDON_TO_DOUBLE_DEFAULT(arg, 0.0));
+          tcc_slot_t slot = 0;
+          memcpy(&slot, &f, sizeof(float));
+          stack.push_back(slot);
           break;
         }
 
         case NTYPE_DOUBLE: {
-          double d = Nan::To<double>(arg).FromMaybe(0.0);
+          double d = ADDON_TO_DOUBLE_DEFAULT(arg, 0.0);
+#ifdef _WIN64
+          tcc_slot_t slot = 0;
+          memcpy(&slot, &d, sizeof(double));
+          stack.push_back(slot);
+#else
           uint32_t* parts = reinterpret_cast<uint32_t*>(&d);
           stack.push_back(parts[0]);
           stack.push_back(parts[1]);
+#endif
           break;
         }
 
         case NTYPE_STRING: {
-          if (arg->IsString()) {
-            Nan::Utf8String str(arg);
-            stringArgs.push_back(std::string(*str));
-            stack.push_back(reinterpret_cast<uint32_t>(stringArgs.back().c_str()));
+          if (ADDON_IS_STRING(arg)) {
+            ADDON_UTF8(str, arg);
+            stringArgs.push_back(std::string(ADDON_UTF8_VALUE(str)));
+            stack.push_back(reinterpret_cast<tcc_slot_t>(stringArgs.back().c_str()));
           } else {
             stack.push_back(0);
           }
@@ -392,8 +422,9 @@ NAN_METHOD(NativeFunctionWrap::Call) {
         }
 
         case NTYPE_POINTER:
-          // Accept number as pointer
-          stack.push_back(static_cast<uint32_t>(Nan::To<uint32_t>(arg).FromMaybe(0)));
+          // Accept number as pointer address
+          stack.push_back(static_cast<tcc_slot_t>(
+            static_cast<uintptr_t>(ADDON_TO_DOUBLE_DEFAULT(arg, 0.0))));
           break;
 
         default:
@@ -408,66 +439,56 @@ NAN_METHOD(NativeFunctionWrap::Call) {
     }
 
     // Call function
-    uint32_t resultLow = callNativeFunction(wrap->funcPtr_, stack, wrap->argTypes_.size());
+    tcc_slot_t resultRaw = callNativeFunction(wrap->funcPtr_, stack, wrap->argTypes_.size());
 
     // Convert result based on return type
     switch (wrap->returnType_) {
       case NTYPE_VOID:
-        info.GetReturnValue().SetUndefined();
-        break;
+        ADDON_RETURN_UNDEFINED();
 
       case NTYPE_INT32:
-        info.GetReturnValue().Set(Nan::New<Integer>(static_cast<int32_t>(resultLow)));
-        break;
+        ADDON_RETURN(ADDON_INTEGER(static_cast<int32_t>(resultRaw)));
 
       case NTYPE_UINT32:
-        info.GetReturnValue().Set(Nan::New<Integer>(resultLow));
-        break;
+        ADDON_RETURN(ADDON_INTEGER(static_cast<uint32_t>(resultRaw)));
 
       case NTYPE_FLOAT: {
-        float f = *reinterpret_cast<float*>(&resultLow);
-        info.GetReturnValue().Set(Nan::New<Number>(f));
-        break;
+        float f;
+        memcpy(&f, &resultRaw, sizeof(float));
+        ADDON_RETURN(ADDON_NUMBER(f));
       }
 
       case NTYPE_DOUBLE: {
-        // Note: double return from x86 cdecl is in FPU ST(0), not EAX:EDX
-        // This simplified version treats it as 32-bit
-        info.GetReturnValue().Set(Nan::New<Number>(static_cast<double>(resultLow)));
-        break;
+        double d;
+        memcpy(&d, &resultRaw, sizeof(double));
+        ADDON_RETURN(ADDON_NUMBER(d));
       }
 
       case NTYPE_POINTER:
-        info.GetReturnValue().Set(Nan::New<Number>(resultLow));
-        break;
+        ADDON_RETURN(ADDON_NUMBER(static_cast<double>(resultRaw)));
 
       case NTYPE_STRING: {
-        const char* str = reinterpret_cast<const char*>(resultLow);
+        const char* str = reinterpret_cast<const char*>(resultRaw);
         if (str != NULL) {
-          info.GetReturnValue().Set(Nan::New<String>(str).ToLocalChecked());
-        } else {
-          info.GetReturnValue().SetNull();
+          ADDON_RETURN(ADDON_STRING(str));
         }
-        break;
+        ADDON_RETURN_NULL();
       }
 
       default:
-        info.GetReturnValue().Set(Nan::New<Integer>(static_cast<int32_t>(resultLow)));
-        break;
+        ADDON_RETURN(ADDON_INTEGER(static_cast<int32_t>(resultRaw)));
     }
-
-    return;
   }
 
   // jsbridge mode (original behavior)
   jsbridge::ContextScope ctxScope(wrap->jsctx_);
 
   // Convert arguments to jsvalues
-  int argc = info.Length();
+  int argc = ADDON_ARG_COUNT();
   std::vector<jsvalue> args(argc);
 
   for (int i = 0; i < argc; i++) {
-    args[i] = wrap->jsctx_->store(info[i]);
+    args[i] = wrap->jsctx_->store(ADDON_ARG(i));
   }
 
   // Call function based on argument count
@@ -519,79 +540,81 @@ NAN_METHOD(NativeFunctionWrap::Call) {
   }
 
   // Return result
-  Local<Value> jsResult = wrap->jsctx_->retrieve(result);
+  ADDON_VALUE jsResult = wrap->jsctx_->retrieve(result);
   wrap->jsctx_->release(result);
 
-  info.GetReturnValue().Set(jsResult);
+  ADDON_RETURN(jsResult);
 }
 
-NAN_METHOD(CompiledModuleWrap::GetFunction) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::GetFunction) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Function name must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Function name must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String name(info[0]);
+  ADDON_UTF8(name, ADDON_ARG(0));
 
-  void* funcPtr = obj->module_->getSymbol(*name);
+  void* funcPtr = obj->module_->getSymbol(ADDON_UTF8_VALUE(name));
 
   if (funcPtr == NULL) {
-    Nan::ThrowError(obj->module_->getError().c_str());
-    return;
+    ADDON_THROW_ERROR(obj->module_->getError().c_str());
+    ADDON_VOID_RETURN();
   }
 
   // Check for typed signature: getFunction(name, returnType, [argTypes])
   // Or legacy: getFunction(name, argCount)
-  bool isTypedCall = info.Length() >= 2 && info[1]->IsString();
+  bool isTypedCall = ADDON_ARG_COUNT() >= 2 && ADDON_IS_STRING(ADDON_ARG(1));
 
   if (isTypedCall) {
     // New API: getFunction(name, returnType, argTypes[])
-    Nan::Utf8String returnTypeStr(info[1]);
-    NativeType returnType = parseType(*returnTypeStr);
+    ADDON_UTF8(returnTypeStr, ADDON_ARG(1));
+    NativeType returnType = parseType(ADDON_UTF8_VALUE(returnTypeStr));
 
     std::vector<NativeType> argTypes;
 
-    if (info.Length() >= 3 && info[2]->IsArray()) {
-      Local<Array> arr = Local<Array>::Cast(info[2]);
-      for (uint32_t i = 0; i < arr->Length(); i++) {
-        Local<Value> item = Nan::Get(arr, i).ToLocalChecked();
-        if (item->IsString()) {
-          Nan::Utf8String typeStr(item);
-          argTypes.push_back(parseType(*typeStr));
+    if (ADDON_ARG_COUNT() >= 3 && ADDON_IS_ARRAY(ADDON_ARG(2))) {
+      ADDON_ARRAY_TYPE arr = ADDON_CAST_ARRAY(ADDON_ARG(2));
+      for (uint32_t i = 0; i < ADDON_LENGTH(arr); i++) {
+        ADDON_VALUE item = ADDON_GET_INDEX(arr, i);
+        if (ADDON_IS_STRING(item)) {
+          ADDON_UTF8(typeStr, item);
+          argTypes.push_back(parseType(ADDON_UTF8_VALUE(typeStr)));
         }
       }
     }
 
-    Local<Object> wrapper = NativeFunctionWrap::CreateTyped(funcPtr, obj->jsctx_, returnType, argTypes);
-    info.GetReturnValue().Set(wrapper);
-  } else {
-    // Legacy API: getFunction(name, argCount) - uses jsbridge mode
-    int argCount = 0;
-    if (info.Length() >= 2 && info[1]->IsNumber()) {
-      argCount = Nan::To<int>(info[1]).FromJust();
-    }
-
-    Local<Object> wrapper = NativeFunctionWrap::Create(funcPtr, obj->jsctx_, argCount);
-    info.GetReturnValue().Set(wrapper);
+    ADDON_OBJECT_TYPE wrapper = NativeFunctionWrap::CreateTyped(funcPtr, obj->jsctx_, returnType, argTypes);
+    ADDON_RETURN(wrapper);
   }
+
+  // Legacy API: getFunction(name, argCount) - uses jsbridge mode
+  int argCount = 0;
+  if (ADDON_ARG_COUNT() >= 2 && ADDON_IS_NUMBER(ADDON_ARG(1))) {
+    argCount = ADDON_TO_INT(ADDON_ARG(1));
+  }
+
+  ADDON_OBJECT_TYPE wrapper = NativeFunctionWrap::Create(funcPtr, obj->jsctx_, argCount);
+  ADDON_RETURN(wrapper);
 }
 
-NAN_METHOD(CompiledModuleWrap::GetError) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::GetError) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
   const std::string& error = obj->module_->getError();
 
   if (error.empty()) {
-    info.GetReturnValue().Set(Nan::Null());
-  } else {
-    info.GetReturnValue().Set(Nan::New<String>(error.c_str()).ToLocalChecked());
+    ADDON_RETURN_NULL();
   }
+  ADDON_RETURN(ADDON_STRING(error.c_str()));
 }
 
-NAN_METHOD(CompiledModuleWrap::Release) {
-  CompiledModuleWrap* obj = Nan::ObjectWrap::Unwrap<CompiledModuleWrap>(info.Holder());
+ADDON_METHOD(CompiledModuleWrap::Release) {
+  ADDON_ENV;
+  CompiledModuleWrap* obj = ADDON_UNWRAP(CompiledModuleWrap, ADDON_HOLDER());
 
   if (obj->module_) {
     obj->module_->release();
@@ -599,22 +622,24 @@ NAN_METHOD(CompiledModuleWrap::Release) {
   if (obj->jsctx_) {
     obj->jsctx_->clear();
   }
+  ADDON_VOID_RETURN();
 }
 
 // Factory function to create new compiler
-NAN_METHOD(CreateCompiler) {
-  Local<Function> cons = Nan::New(CompiledModuleWrap::constructor);
-  info.GetReturnValue().Set(Nan::NewInstance(cons).ToLocalChecked());
+ADDON_METHOD(CreateCompiler) {
+  ADDON_ENV;
+  auto cons = ADDON_PERSISTENT_GET(CompiledModuleWrap::constructor);
+  ADDON_RETURN(ADDON_NEW_INSTANCE(cons));
 }
 
 // Module initialization
-void InitTinyCC(Local<Object> exports) {
-  Local<Object> tinycc = Nan::New<Object>();
+void InitTinyCC(ADDON_INIT_PARAMS) {
+  ADDON_OBJECT_TYPE tinycc = ADDON_OBJECT();
 
   CompiledModuleWrap::Init(tinycc);
 
   // Factory function
-  Nan::SetMethod(tinycc, "create", CreateCompiler);
+  ADDON_SET_METHOD(tinycc, "create", CreateCompiler);
 
-  exports->Set(Nan::New("tinycc").ToLocalChecked(), tinycc);
+  ADDON_SET(exports, "tinycc", tinycc);
 }

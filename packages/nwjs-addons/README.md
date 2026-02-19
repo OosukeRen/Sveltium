@@ -1,6 +1,11 @@
 # nwjs-addons
 
-Native C++ addons for NW.js applications, compiled into a single `.node` binary via [NAN](https://github.com/nodejs/nan) and [cmake-js](https://github.com/nicknisi/cmake-js). Ships a prebuilt binary for NW.js 0.12.3 (Windows XP, ia32) with source included for rebuilding against other NW.js versions.
+Native C++ addons for NW.js applications, compiled into a single `.node` binary via [cmake-js](https://github.com/nicknisi/cmake-js). Supports two compile-time backends:
+
+- **NAN** (default) — targets NW.js 0.12.3+ (V8 4.1, ia32, Windows XP compatible)
+- **N-API** via [node-addon-api](https://github.com/nicknisi/node-addon-api) — targets NW.js 0.35+ (ABI-stable, x64)
+
+Ships a prebuilt binary for NW.js 0.12.3 (Windows XP, ia32) with source included for rebuilding against other NW.js versions.
 
 ## Addons
 
@@ -44,30 +49,35 @@ var tinycc = require('nwjs-addons/tinycc')
 
 ## Build profiles
 
-The default build targets NW.js 0.12.3 with Windows XP compatibility (ia32, VS2015, v140_xp toolset):
-
-```bash
-npm run build           # default: NW.js 0.12.3, ia32, VS2015 v140_xp
-npm run build:xp        # same as above (explicit name)
-npm run build:modern    # NW.js 0.89.0, x64, system default compiler
-npm run rebuild         # clean + build (XP target)
-npm run rebuild:modern  # clean + build (modern target)
-npm run build:debug     # debug build (XP target)
-npm run clean           # remove build artifacts
-```
+| Script | Backend | NW.js | Arch | Addons |
+|--------|---------|-------|------|--------|
+| `npm run build` | NAN | 0.12.3 | ia32 | All 9 (default, XP compatible) |
+| `npm run build:xp` | NAN | 0.12.3 | ia32 | All 9 (same as above) |
+| `npm run build:modern` | NAN | 0.89.0 | x64 | All 9 |
+| `npm run build:napi` | N-API | 0.89.0 | x64 | All 9 |
+| `npm run rebuild` | NAN | 0.12.3 | ia32 | Clean + build |
+| `npm run rebuild:modern` | NAN | 0.89.0 | x64 | Clean + build |
+| `npm run rebuild:napi` | N-API | 0.89.0 | x64 | Clean + build |
+| `npm run build:debug` | NAN | 0.12.3 | ia32 | Debug build |
+| `npm run clean` | — | — | — | Remove build artifacts |
 
 To target a different NW.js version, modify the `--runtime-version` flag in the build script.
 
+### NAN vs N-API
+
+The backend is selected at compile time via the `USE_NAPI` CMake flag. All addon source files use `addon_api.h` macros that expand to either NAN or N-API calls:
+
+- **NAN** (default): Uses NAN 2.5.1 which supports V8 versions used by NW.js 0.12.3 through moderately recent versions. For very new NW.js versions, you may need to update NAN in `devDependencies`.
+- **N-API**: Uses node-addon-api 3.x for ABI stability across NW.js versions. Produces a single binary that works with any NW.js 0.35+ without recompilation.
+
+All 9 addons compile under both backends. The tinycc jsbridge uses minimal `#ifdef USE_NAPI` blocks for its value storage mechanism (`napi_ref` vs `v8::Persistent`), while the rest of its code uses standard `ADDON_*` macros. Vendor libraries (SDL2, libtcc) ship both x86 and x64 variants.
+
 ### Build requirements (source compilation)
 
-- **Visual Studio 2015** with v140_xp toolset (for XP target) or any modern VS (for modern target)
+- **Visual Studio 2015** with v140_xp toolset (for XP target) or any modern VS (for modern/N-API target)
 - **CMake** (cmake-js uses it internally)
 - **cmake-js 4.0.0**: `npm install -g cmake-js@4.0.0`
 - **Windows SDK**
-
-### NAN version compatibility
-
-The package uses NAN 2.5.1 which supports V8 versions used by NW.js 0.12.3 through moderately recent versions. For very new NW.js versions, you may need to update NAN in `devDependencies` to a newer release.
 
 ## API Reference
 

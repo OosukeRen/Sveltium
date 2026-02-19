@@ -1,7 +1,7 @@
 {
   "name": "nwjs-addons",
-  "version": "0.1.1",
-  "description": "Native C++ addons for NW.js applications (Windows XP compatible)",
+  "version": "0.2.0",
+  "description": "Native C++ addons for NW.js applications (dual NAN/N-API backend)",
   "main": "./index.js",
   "exports": {
     ".": "./index.js",
@@ -39,6 +39,8 @@
     "build:debug": "cmake-js build --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp -D",
     "rebuild": "cmake-js rebuild --runtime nw --runtime-version 0.12.3 --arch ia32 -G \"Visual Studio 14 2015\" -t v140_xp",
     "rebuild:modern": "cmake-js rebuild --runtime nw --runtime-version 0.89.0 --arch x64",
+    "build:napi": "cmake-js compile --runtime nw --runtime-version 0.89.0 --arch x64 --CDUSE_NAPI=ON",
+    "rebuild:napi": "cmake-js rebuild --runtime nw --runtime-version 0.89.0 --arch x64 --CDUSE_NAPI=ON",
     "clean": "cmake-js clean"
   },
   "keywords": [
@@ -79,7 +81,8 @@
   },
   "devDependencies": {
     "cmake-js": "4.0.0",
-    "nan": "2.5.1"
+    "nan": "2.5.1",
+    "node-addon-api": "^3.0.0"
   },
   "cmake-js": {
     "runtime": "nw",

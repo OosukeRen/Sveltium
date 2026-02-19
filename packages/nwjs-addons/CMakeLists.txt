@@ -19,6 +19,26 @@ endif()
 # Include cmake-js paths (includes node headers, v8, uv, and nan)
 include_directories(${CMAKE_JS_INC})
 
+# addon_api.h abstraction layer — include src/ so all addons can find it
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
+
+# Backend selection: USE_NAPI for node-addon-api, USE_NAN (default) for NAN
+if(USE_NAPI)
+  add_definitions(-DUSE_NAPI=1)
+  add_definitions(-DNAPI_DISABLE_CPP_EXCEPTIONS)
+
+  # node-addon-api C++ wrapper headers
+  execute_process(COMMAND node -p "require('node-addon-api').include"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE NODE_ADDON_API_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  string(REPLACE "\"" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
+  include_directories(${NODE_ADDON_API_DIR})
+else()
+  add_definitions(-DUSE_NAN=1)
+endif()
+
 # Source files - start with just module.cpp, add addons incrementally
 set(SOURCES src/module.cpp)
 
@@ -34,12 +54,17 @@ list(APPEND SOURCES ${FOLDER_DIALOG_SRC})
 file(GLOB IPC_SRC "ipc/src/*.cpp")
 list(APPEND SOURCES ${IPC_SRC})
 
-# TinyCC addon
+# TinyCC addon — jsbridge abstracted for both NAN and N-API
 file(GLOB TINYCC_SRC "tinycc/src/*.cpp")
 list(APPEND SOURCES ${TINYCC_SRC})
 include_directories("tinycc/src")
 include_directories("tinycc/include")
-link_directories("${CMAKE_CURRENT_SOURCE_DIR}/tinycc/lib")
+# Vendor lib directory: x86 or x64 based on pointer size
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  link_directories("${CMAKE_CURRENT_SOURCE_DIR}/tinycc/lib/x64")
+else()
+  link_directories("${CMAKE_CURRENT_SOURCE_DIR}/tinycc/lib/x86")
+endif()
 
 # Call-DLL addon
 file(GLOB CALLDLL_SRC "call-dll/src/*.cpp")
@@ -68,12 +93,17 @@ list(APPEND SOURCES ${CSVPARSER_SRC})
 file(GLOB RSSPARSER_SRC "rss-parser/src/*.cpp")
 list(APPEND SOURCES ${RSSPARSER_SRC})
 
-# SDL2 Input addon
+# SDL2 Input addon — vendor lib per architecture
 file(GLOB SDL2INPUT_SRC "sdl2-input/src/*.cpp")
 list(APPEND SOURCES ${SDL2INPUT_SRC})
 include_directories("sdl2-input/src")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/sdl2-input/vendor/SDL2/include")
-link_directories("${CMAKE_CURRENT_SOURCE_DIR}/sdl2-input/vendor/SDL2/lib")
+# Vendor lib directory: x86 or x64 based on pointer size
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  link_directories("${CMAKE_CURRENT_SOURCE_DIR}/sdl2-input/vendor/SDL2/lib/x64")
+else()
+  link_directories("${CMAKE_CURRENT_SOURCE_DIR}/sdl2-input/vendor/SDL2/lib/x86")
+endif()
 
 # Single combined addon
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
@@ -95,11 +125,10 @@ if(WIN32)
     Ole32.lib
     Gdiplus.lib
     User32.lib
-    libtcc.lib
-    SDL2-static.lib
     winmm.lib
     imm32.lib
     version.lib
     setupapi.lib
   )
+  target_link_libraries(${PROJECT_NAME} libtcc.lib SDL2-static.lib)
 endif()

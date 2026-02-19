@@ -1,91 +1,82 @@
-#include <nan.h>
+#include "addon_api.h"
 #include "folder_dialog.h"
 
-using namespace v8;
 using namespace folder_dialog;
 
 // Helper to parse FileOptions from JS object
-static FileOptions parseFileOptions(Local<Object> optObj) {
+static FileOptions parseFileOptions(ADDON_OBJECT_TYPE optObj) {
   FileOptions opts;
   opts.multiSelect = false;
 
-  Local<String> titleKey = Nan::New("title").ToLocalChecked();
-  Local<String> initialPathKey = Nan::New("initialPath").ToLocalChecked();
-  Local<String> defaultNameKey = Nan::New("defaultName").ToLocalChecked();
-  Local<String> filtersKey = Nan::New("filters").ToLocalChecked();
-  Local<String> multiSelectKey = Nan::New("multiSelect").ToLocalChecked();
-
-  if (Nan::Has(optObj, titleKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, titleKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      opts.title = std::string(*str);
+  if (ADDON_HAS(optObj, "title")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "title");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      opts.title = std::string(ADDON_UTF8_VALUE(str));
     }
   }
 
-  if (Nan::Has(optObj, initialPathKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, initialPathKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      opts.initialPath = std::string(*str);
+  if (ADDON_HAS(optObj, "initialPath")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "initialPath");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      opts.initialPath = std::string(ADDON_UTF8_VALUE(str));
     }
   }
 
-  if (Nan::Has(optObj, defaultNameKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, defaultNameKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      opts.defaultName = std::string(*str);
+  if (ADDON_HAS(optObj, "defaultName")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "defaultName");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      opts.defaultName = std::string(ADDON_UTF8_VALUE(str));
     }
   }
 
-  if (Nan::Has(optObj, filtersKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, filtersKey).ToLocalChecked();
-    if (val->IsArray()) {
-      Local<Array> arr = Local<Array>::Cast(val);
-      for (uint32_t i = 0; i < arr->Length(); i++) {
-        Local<Value> item = Nan::Get(arr, i).ToLocalChecked();
-        if (item->IsString()) {
-          Nan::Utf8String str(item);
-          opts.filters.push_back(std::string(*str));
+  if (ADDON_HAS(optObj, "filters")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "filters");
+    if (ADDON_IS_ARRAY(val)) {
+      ADDON_ARRAY_TYPE arr = ADDON_CAST_ARRAY(val);
+      for (uint32_t i = 0; i < ADDON_LENGTH(arr); i++) {
+        ADDON_VALUE item = ADDON_GET_INDEX(arr, i);
+        if (ADDON_IS_STRING(item)) {
+          ADDON_UTF8(str, item);
+          opts.filters.push_back(std::string(ADDON_UTF8_VALUE(str)));
         }
       }
     }
   }
 
-  if (Nan::Has(optObj, multiSelectKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, multiSelectKey).ToLocalChecked();
-    if (val->IsBoolean()) {
-      opts.multiSelect = Nan::To<bool>(val).FromJust();
+  if (ADDON_HAS(optObj, "multiSelect")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "multiSelect");
+    if (ADDON_IS_BOOLEAN(val)) {
+      opts.multiSelect = ADDON_TO_BOOL(val);
     }
   }
 
   return opts;
 }
 
-NAN_METHOD(Open) {
+ADDON_METHOD(Open) {
+  ADDON_ENV;
   Options opts;
 
   // Parse options object if provided
-  if (info.Length() > 0 && info[0]->IsObject()) {
-    Local<Object> optObj = Nan::To<Object>(info[0]).ToLocalChecked();
+  if (ADDON_ARG_COUNT() > 0 && ADDON_IS_OBJECT(ADDON_ARG(0))) {
+    ADDON_OBJECT_TYPE optObj = ADDON_TO_OBJECT(ADDON_ARG(0));
 
-    Local<String> titleKey = Nan::New("title").ToLocalChecked();
-    Local<String> initialPathKey = Nan::New("initialPath").ToLocalChecked();
-
-    if (Nan::Has(optObj, titleKey).FromJust()) {
-      Local<Value> titleVal = Nan::Get(optObj, titleKey).ToLocalChecked();
-      if (titleVal->IsString()) {
-        Nan::Utf8String title(titleVal);
-        opts.title = std::string(*title);
+    if (ADDON_HAS(optObj, "title")) {
+      ADDON_VALUE titleVal = ADDON_GET(optObj, "title");
+      if (ADDON_IS_STRING(titleVal)) {
+        ADDON_UTF8(title, titleVal);
+        opts.title = std::string(ADDON_UTF8_VALUE(title));
       }
     }
 
-    if (Nan::Has(optObj, initialPathKey).FromJust()) {
-      Local<Value> pathVal = Nan::Get(optObj, initialPathKey).ToLocalChecked();
-      if (pathVal->IsString()) {
-        Nan::Utf8String path(pathVal);
-        opts.initialPath = std::string(*path);
+    if (ADDON_HAS(optObj, "initialPath")) {
+      ADDON_VALUE pathVal = ADDON_GET(optObj, "initialPath");
+      if (ADDON_IS_STRING(pathVal)) {
+        ADDON_UTF8(path, pathVal);
+        opts.initialPath = std::string(ADDON_UTF8_VALUE(path));
       }
     }
   }
@@ -93,61 +84,58 @@ NAN_METHOD(Open) {
   std::string result = open(opts);
 
   if (result.empty()) {
-    info.GetReturnValue().SetNull();
-  } else {
-    info.GetReturnValue().Set(Nan::New(result).ToLocalChecked());
+    ADDON_RETURN_NULL();
   }
+  ADDON_RETURN(ADDON_STRING(result));
 }
 
-NAN_METHOD(OpenFile) {
+ADDON_METHOD(OpenFile) {
+  ADDON_ENV;
   FileOptions opts;
 
-  if (info.Length() > 0 && info[0]->IsObject()) {
-    Local<Object> optObj = Nan::To<Object>(info[0]).ToLocalChecked();
+  if (ADDON_ARG_COUNT() > 0 && ADDON_IS_OBJECT(ADDON_ARG(0))) {
+    ADDON_OBJECT_TYPE optObj = ADDON_TO_OBJECT(ADDON_ARG(0));
     opts = parseFileOptions(optObj);
   }
 
   std::vector<std::string> results = openFile(opts);
 
   if (results.empty()) {
-    info.GetReturnValue().SetNull();
-  } else if (results.size() == 1 && !opts.multiSelect) {
-    // Return single string for single file selection
-    info.GetReturnValue().Set(Nan::New(results[0]).ToLocalChecked());
-  } else {
-    // Return array for multiselect
-    Local<Array> arr = Nan::New<Array>(static_cast<uint32_t>(results.size()));
-    for (size_t i = 0; i < results.size(); i++) {
-      Nan::Set(arr, static_cast<uint32_t>(i), Nan::New(results[i]).ToLocalChecked());
-    }
-    info.GetReturnValue().Set(arr);
+    ADDON_RETURN_NULL();
   }
+
+  if (results.size() == 1 && !opts.multiSelect) {
+    // Return single string for single file selection
+    ADDON_RETURN(ADDON_STRING(results[0]));
+  }
+
+  // Return array for multiselect
+  ADDON_ARRAY_TYPE arr = ADDON_ARRAY(results.size());
+  for (size_t i = 0; i < results.size(); i++) {
+    ADDON_SET_INDEX(arr, i, ADDON_STRING(results[i]));
+  }
+  ADDON_RETURN(arr);
 }
 
-NAN_METHOD(SaveFile) {
+ADDON_METHOD(SaveFile) {
+  ADDON_ENV;
   FileOptions opts;
 
-  if (info.Length() > 0 && info[0]->IsObject()) {
-    Local<Object> optObj = Nan::To<Object>(info[0]).ToLocalChecked();
+  if (ADDON_ARG_COUNT() > 0 && ADDON_IS_OBJECT(ADDON_ARG(0))) {
+    ADDON_OBJECT_TYPE optObj = ADDON_TO_OBJECT(ADDON_ARG(0));
     opts = parseFileOptions(optObj);
   }
 
   std::string result = saveFile(opts);
 
   if (result.empty()) {
-    info.GetReturnValue().SetNull();
-  } else {
-    info.GetReturnValue().Set(Nan::New(result).ToLocalChecked());
+    ADDON_RETURN_NULL();
   }
+  ADDON_RETURN(ADDON_STRING(result));
 }
 
-void InitFolderDialog(Local<Object> exports) {
-  Nan::Set(exports, Nan::New("folderDialogOpen").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(Open)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("fileDialogOpen").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(OpenFile)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("fileDialogSave").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(SaveFile)).ToLocalChecked());
+void InitFolderDialog(ADDON_INIT_PARAMS) {
+  ADDON_EXPORT_FUNCTION(exports, "folderDialogOpen", Open);
+  ADDON_EXPORT_FUNCTION(exports, "fileDialogOpen", OpenFile);
+  ADDON_EXPORT_FUNCTION(exports, "fileDialogSave", SaveFile);
 }

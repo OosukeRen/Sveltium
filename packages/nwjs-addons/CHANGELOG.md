@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0
+
+### Added
+
+- **Dual NAN/N-API backend**: All addon source files now use `addon_api.h` macros that compile against either NAN (legacy) or N-API via node-addon-api (modern), selected at build time
+- `src/addon_api.h` — router header selecting backend based on `USE_NAPI` / `USE_NAN` defines
+- `src/addon_api_nan.h` — NAN 2.5.1 backend macro definitions
+- `src/addon_api_napi.h` — N-API (node-addon-api 3.x) backend macro definitions
+- `build:napi` and `rebuild:napi` scripts for N-API builds (NW.js 0.89.0, x64)
+- `node-addon-api` added to devDependencies
+
+### Changed
+
+- All 9 addon modules migrated from direct NAN calls to `ADDON_*` macros
+- CMakeLists.txt updated with `USE_NAPI`/`USE_NAN` build-time selection and node-addon-api include paths
+- tinycc jsbridge ported for dual NAN/N-API compilation (napi_ref storage, ADDON_* macros for value conversion)
+- tinycc module.cpp fixed for x64 calling convention (uintptr_t slot type, proper 64-bit value packing)
+- Vendor libraries restructured with x86/x64 subdirectories (SDL2-static.lib, libtcc)
+- README updated with dual-backend architecture docs and build profile table
+
 ## 0.1.1
 
 ### Fixed

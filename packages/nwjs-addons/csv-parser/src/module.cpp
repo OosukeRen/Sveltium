@@ -1,143 +1,131 @@
-#include <nan.h>
+#include "addon_api.h"
 #include <fstream>
 #include "csv_parser.h"
 
-using namespace v8;
 using namespace csvparser;
 
-static ParseOptions extractParseOptions(Local<Object> optObj) {
+static ParseOptions extractParseOptions(ADDON_OBJECT_TYPE optObj) {
   ParseOptions opts;
 
-  Local<String> delimKey = Nan::New("delimiter").ToLocalChecked();
-  Local<String> quoteKey = Nan::New("quote").ToLocalChecked();
-  Local<String> escapeKey = Nan::New("escape").ToLocalChecked();
-  Local<String> skipEmptyKey = Nan::New("skipEmptyLines").ToLocalChecked();
-  Local<String> trimKey = Nan::New("trim").ToLocalChecked();
-
-  if (Nan::Has(optObj, delimKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, delimKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      if (str.length() > 0) {
-        opts.delimiter = (*str)[0];
+  if (ADDON_HAS(optObj, "delimiter")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "delimiter");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      if (ADDON_UTF8_LENGTH(str) > 0) {
+        opts.delimiter = ADDON_UTF8_VALUE(str)[0];
       }
     }
   }
 
-  if (Nan::Has(optObj, quoteKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, quoteKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      if (str.length() > 0) {
-        opts.quote = (*str)[0];
+  if (ADDON_HAS(optObj, "quote")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "quote");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      if (ADDON_UTF8_LENGTH(str) > 0) {
+        opts.quote = ADDON_UTF8_VALUE(str)[0];
       }
     }
   }
 
-  if (Nan::Has(optObj, escapeKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, escapeKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      if (str.length() > 0) {
-        opts.escape = (*str)[0];
+  if (ADDON_HAS(optObj, "escape")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "escape");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      if (ADDON_UTF8_LENGTH(str) > 0) {
+        opts.escape = ADDON_UTF8_VALUE(str)[0];
       }
     }
   }
 
-  if (Nan::Has(optObj, skipEmptyKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, skipEmptyKey).ToLocalChecked();
-    if (val->IsBoolean()) {
-      opts.skipEmptyLines = val->BooleanValue();
+  if (ADDON_HAS(optObj, "skipEmptyLines")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "skipEmptyLines");
+    if (ADDON_IS_BOOLEAN(val)) {
+      opts.skipEmptyLines = ADDON_BOOL_VALUE(val);
     }
   }
 
-  if (Nan::Has(optObj, trimKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, trimKey).ToLocalChecked();
-    if (val->IsBoolean()) {
-      opts.trim = val->BooleanValue();
+  if (ADDON_HAS(optObj, "trim")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "trim");
+    if (ADDON_IS_BOOLEAN(val)) {
+      opts.trim = ADDON_BOOL_VALUE(val);
     }
   }
 
   return opts;
 }
 
-static StringifyOptions extractStringifyOptions(Local<Object> optObj) {
+static StringifyOptions extractStringifyOptions(ADDON_OBJECT_TYPE optObj) {
   StringifyOptions opts;
 
-  Local<String> delimKey = Nan::New("delimiter").ToLocalChecked();
-  Local<String> quoteKey = Nan::New("quote").ToLocalChecked();
-  Local<String> quoteAllKey = Nan::New("quoteAll").ToLocalChecked();
-  Local<String> lineEndingKey = Nan::New("lineEnding").ToLocalChecked();
-
-  if (Nan::Has(optObj, delimKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, delimKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      if (str.length() > 0) {
-        opts.delimiter = (*str)[0];
+  if (ADDON_HAS(optObj, "delimiter")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "delimiter");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      if (ADDON_UTF8_LENGTH(str) > 0) {
+        opts.delimiter = ADDON_UTF8_VALUE(str)[0];
       }
     }
   }
 
-  if (Nan::Has(optObj, quoteKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, quoteKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      if (str.length() > 0) {
-        opts.quote = (*str)[0];
+  if (ADDON_HAS(optObj, "quote")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "quote");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      if (ADDON_UTF8_LENGTH(str) > 0) {
+        opts.quote = ADDON_UTF8_VALUE(str)[0];
       }
     }
   }
 
-  if (Nan::Has(optObj, quoteAllKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, quoteAllKey).ToLocalChecked();
-    if (val->IsBoolean()) {
-      opts.quoteAll = val->BooleanValue();
+  if (ADDON_HAS(optObj, "quoteAll")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "quoteAll");
+    if (ADDON_IS_BOOLEAN(val)) {
+      opts.quoteAll = ADDON_BOOL_VALUE(val);
     }
   }
 
-  if (Nan::Has(optObj, lineEndingKey).FromJust()) {
-    Local<Value> val = Nan::Get(optObj, lineEndingKey).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      opts.lineEnding = std::string(*str);
+  if (ADDON_HAS(optObj, "lineEnding")) {
+    ADDON_VALUE val = ADDON_GET(optObj, "lineEnding");
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      opts.lineEnding = std::string(ADDON_UTF8_VALUE(str));
     }
   }
 
   return opts;
 }
 
-static Local<Array> rowsToJsArray(const std::vector<std::vector<std::string>>& rows) {
-  Local<Array> result = Nan::New<Array>(static_cast<uint32_t>(rows.size()));
+static ADDON_ARRAY_TYPE rowsToJsArray(const std::vector<std::vector<std::string>>& rows) {
+  ADDON_ARRAY_TYPE result = ADDON_ARRAY(rows.size());
 
   for (size_t i = 0; i < rows.size(); i++) {
     const std::vector<std::string>& row = rows[i];
-    Local<Array> jsRow = Nan::New<Array>(static_cast<uint32_t>(row.size()));
+    ADDON_ARRAY_TYPE jsRow = ADDON_ARRAY(row.size());
 
     for (size_t j = 0; j < row.size(); j++) {
-      Nan::Set(jsRow, static_cast<uint32_t>(j), Nan::New(row[j]).ToLocalChecked());
+      ADDON_SET_INDEX(jsRow, j, ADDON_STRING(row[j]));
     }
 
-    Nan::Set(result, static_cast<uint32_t>(i), jsRow);
+    ADDON_SET_INDEX(result, i, jsRow);
   }
 
   return result;
 }
 
-static std::vector<std::vector<std::string>> jsArrayToRows(Local<Array> arr) {
+static std::vector<std::vector<std::string>> jsArrayToRows(ADDON_ARRAY_TYPE arr) {
   std::vector<std::vector<std::string>> rows;
 
-  for (uint32_t i = 0; i < arr->Length(); i++) {
-    Local<Value> rowVal = Nan::Get(arr, i).ToLocalChecked();
+  for (uint32_t i = 0; i < ADDON_LENGTH(arr); i++) {
+    ADDON_VALUE rowVal = ADDON_GET_INDEX(arr, i);
     std::vector<std::string> row;
 
-    if (rowVal->IsArray()) {
-      Local<Array> jsRow = Local<Array>::Cast(rowVal);
-      for (uint32_t j = 0; j < jsRow->Length(); j++) {
-        Local<Value> cellVal = Nan::Get(jsRow, j).ToLocalChecked();
-        if (cellVal->IsString()) {
-          Nan::Utf8String str(cellVal);
-          row.push_back(std::string(*str));
+    if (ADDON_IS_ARRAY(rowVal)) {
+      ADDON_ARRAY_TYPE jsRow = ADDON_CAST_ARRAY(rowVal);
+      for (uint32_t j = 0; j < ADDON_LENGTH(jsRow); j++) {
+        ADDON_VALUE cellVal = ADDON_GET_INDEX(jsRow, j);
+        if (ADDON_IS_STRING(cellVal)) {
+          ADDON_UTF8(str, cellVal);
+          row.push_back(std::string(ADDON_UTF8_VALUE(str)));
         } else {
           row.push_back("");
         }
@@ -150,93 +138,90 @@ static std::vector<std::vector<std::string>> jsArrayToRows(Local<Array> arr) {
   return rows;
 }
 
-NAN_METHOD(Parse) {
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("First argument must be a string");
-    return;
+ADDON_METHOD(Parse) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("First argument must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String content(info[0]);
+  ADDON_UTF8(content, ADDON_ARG(0));
   ParseOptions opts;
 
-  if (info.Length() >= 2 && info[1]->IsObject()) {
-    opts = extractParseOptions(Local<Object>::Cast(info[1]));
+  if (ADDON_ARG_COUNT() >= 2 && ADDON_IS_OBJECT(ADDON_ARG(1))) {
+    opts = extractParseOptions(ADDON_AS_OBJECT(ADDON_ARG(1)));
   }
 
-  std::vector<std::vector<std::string>> rows = parse(std::string(*content), opts);
-  info.GetReturnValue().Set(rowsToJsArray(rows));
+  std::vector<std::vector<std::string>> rows = parse(std::string(ADDON_UTF8_VALUE(content)), opts);
+  ADDON_RETURN(rowsToJsArray(rows));
 }
 
-NAN_METHOD(ParseFile) {
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("First argument must be a file path string");
-    return;
+ADDON_METHOD(ParseFile) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("First argument must be a file path string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String filePath(info[0]);
+  ADDON_UTF8(filePath, ADDON_ARG(0));
   ParseOptions opts;
 
-  if (info.Length() >= 2 && info[1]->IsObject()) {
-    opts = extractParseOptions(Local<Object>::Cast(info[1]));
+  if (ADDON_ARG_COUNT() >= 2 && ADDON_IS_OBJECT(ADDON_ARG(1))) {
+    opts = extractParseOptions(ADDON_AS_OBJECT(ADDON_ARG(1)));
   }
 
-  std::string content = readFileContents(std::string(*filePath));
+  std::string content = readFileContents(std::string(ADDON_UTF8_VALUE(filePath)));
   if (content.empty()) {
-    std::string path(*filePath);
+    std::string path(ADDON_UTF8_VALUE(filePath));
     std::ifstream testFile(path.c_str());
     if (!testFile.is_open()) {
-      Nan::ThrowError("Could not open file");
-      return;
+      ADDON_THROW_ERROR("Could not open file");
+      ADDON_VOID_RETURN();
     }
     testFile.close();
   }
 
   std::vector<std::vector<std::string>> rows = parse(content, opts);
-  info.GetReturnValue().Set(rowsToJsArray(rows));
+  ADDON_RETURN(rowsToJsArray(rows));
 }
 
-NAN_METHOD(Stringify) {
-  if (info.Length() < 1 || !info[0]->IsArray()) {
-    Nan::ThrowTypeError("First argument must be an array");
-    return;
+ADDON_METHOD(Stringify) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_ARRAY(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("First argument must be an array");
+    ADDON_VOID_RETURN();
   }
 
-  Local<Array> arr = Local<Array>::Cast(info[0]);
+  ADDON_ARRAY_TYPE arr = ADDON_CAST_ARRAY(ADDON_ARG(0));
   StringifyOptions opts;
 
-  if (info.Length() >= 2 && info[1]->IsObject()) {
-    opts = extractStringifyOptions(Local<Object>::Cast(info[1]));
+  if (ADDON_ARG_COUNT() >= 2 && ADDON_IS_OBJECT(ADDON_ARG(1))) {
+    opts = extractStringifyOptions(ADDON_AS_OBJECT(ADDON_ARG(1)));
   }
 
   std::vector<std::vector<std::string>> rows = jsArrayToRows(arr);
   std::string result = stringify(rows, opts);
 
-  info.GetReturnValue().Set(Nan::New(result).ToLocalChecked());
+  ADDON_RETURN(ADDON_STRING(result));
 }
 
-NAN_METHOD(WriteFile) {
-  if (info.Length() < 2 || !info[0]->IsString() || !info[1]->IsString()) {
-    Nan::ThrowTypeError("Arguments must be (filePath, content)");
-    return;
+ADDON_METHOD(WriteFile) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 2 || !ADDON_IS_STRING(ADDON_ARG(0)) || !ADDON_IS_STRING(ADDON_ARG(1))) {
+    ADDON_THROW_TYPE_ERROR("Arguments must be (filePath, content)");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String filePath(info[0]);
-  Nan::Utf8String content(info[1]);
+  ADDON_UTF8(filePath, ADDON_ARG(0));
+  ADDON_UTF8(content, ADDON_ARG(1));
 
-  bool success = writeFile(std::string(*filePath), std::string(*content));
-  info.GetReturnValue().Set(Nan::New(success));
+  bool success = writeFile(std::string(ADDON_UTF8_VALUE(filePath)), std::string(ADDON_UTF8_VALUE(content)));
+  ADDON_RETURN(ADDON_BOOL(success));
 }
 
-void InitCsvParser(Local<Object> exports) {
-  Nan::Set(exports, Nan::New("csvParse").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(Parse)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("csvParseFile").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(ParseFile)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("csvStringify").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(Stringify)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("csvWriteFile").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(WriteFile)).ToLocalChecked());
+void InitCsvParser(ADDON_INIT_PARAMS) {
+  ADDON_EXPORT_FUNCTION(exports, "csvParse", Parse);
+  ADDON_EXPORT_FUNCTION(exports, "csvParseFile", ParseFile);
+  ADDON_EXPORT_FUNCTION(exports, "csvStringify", Stringify);
+  ADDON_EXPORT_FUNCTION(exports, "csvWriteFile", WriteFile);
 }

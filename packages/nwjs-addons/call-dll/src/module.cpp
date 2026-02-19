@@ -1,8 +1,7 @@
-#include <nan.h>
+#include "addon_api.h"
 #include "dll_loader.h"
 #include "function_call.h"
 
-using namespace v8;
 using namespace calldll;
 
 // Type string to ArgType mapping
@@ -27,18 +26,18 @@ static ArgType parseType(const std::string& typeStr) {
 }
 
 // DLL Handle wrapper
-class DLLHandleWrap : public Nan::ObjectWrap {
+class DLLHandleWrap : public ADDON_OBJECT_WRAP {
 public:
-  static void Init(Local<Object> exports);
-  static NAN_METHOD(Load);
-  static NAN_METHOD(LoadSystem);
-  static NAN_METHOD(GetFunction);
-  static NAN_METHOD(GetSymbol);
-  static NAN_METHOD(Close);
-  static NAN_METHOD(GetPath);
-  static NAN_METHOD(GetError);
+  static void Init(ADDON_INIT_PARAMS);
+  static ADDON_METHOD(Load);
+  static ADDON_METHOD(LoadSystem);
+  static ADDON_METHOD(GetFunction);
+  static ADDON_METHOD(GetSymbol);
+  static ADDON_METHOD(Close);
+  static ADDON_METHOD(GetPath);
+  static ADDON_METHOD(GetError);
 
-  static Nan::Persistent<Function> constructor;
+  static ADDON_PERSISTENT_FUNCTION constructor;
 
   DLLHandle* handle_;
 
@@ -52,14 +51,14 @@ private:
   }
 };
 
-Nan::Persistent<Function> DLLHandleWrap::constructor;
+ADDON_PERSISTENT_FUNCTION DLLHandleWrap::constructor;
 
 // DLL Function wrapper
-class DLLFunctionWrap : public Nan::ObjectWrap {
+class DLLFunctionWrap : public ADDON_OBJECT_WRAP {
 public:
-  static Local<Object> Create(DLLFunction* func);
-  static NAN_METHOD(Call);
-  static NAN_METHOD(GetPointer);
+  static ADDON_OBJECT_TYPE Create(DLLFunction* func);
+  static ADDON_METHOD(Call);
+  static ADDON_METHOD(GetPointer);
 
   DLLFunction* func_;
 
@@ -73,262 +72,264 @@ private:
   }
 };
 
-void DLLHandleWrap::Init(Local<Object> exports) {
-  Nan::HandleScope scope;
+void DLLHandleWrap::Init(ADDON_INIT_PARAMS) {
+  ADDON_HANDLE_SCOPE();
 
   // DLLHandle constructor
-  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>();
-  tpl->SetClassName(Nan::New("DLLHandle").ToLocalChecked());
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+  auto tpl = ADDON_NEW_CTOR_TEMPLATE();
+  ADDON_SET_CLASS_NAME(tpl, "DLLHandle");
+  ADDON_SET_INTERNAL_FIELD_COUNT(tpl, 1);
 
-  Nan::SetPrototypeMethod(tpl, "getFunction", GetFunction);
-  Nan::SetPrototypeMethod(tpl, "getSymbol", GetSymbol);
-  Nan::SetPrototypeMethod(tpl, "close", Close);
-  Nan::SetPrototypeMethod(tpl, "getPath", GetPath);
-  Nan::SetPrototypeMethod(tpl, "getError", GetError);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "getFunction", GetFunction);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "getSymbol", GetSymbol);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "close", Close);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "getPath", GetPath);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "getError", GetError);
 
-  constructor.Reset(tpl->GetFunction());
+  ADDON_PERSISTENT_RESET(constructor, ADDON_GET_CTOR_FUNCTION(tpl));
 
   // Module level functions
-  Nan::SetMethod(exports, "load", Load);
-  Nan::SetMethod(exports, "loadSystem", LoadSystem);
+  ADDON_SET_METHOD(exports, "load", Load);
+  ADDON_SET_METHOD(exports, "loadSystem", LoadSystem);
 }
 
-NAN_METHOD(DLLHandleWrap::Load) {
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Path must be a string");
-    return;
+ADDON_METHOD(DLLHandleWrap::Load) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Path must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String path(info[0]);
+  ADDON_UTF8(path, ADDON_ARG(0));
 
-  DLLHandle* handle = new DLLHandle(*path, false);
+  DLLHandle* handle = new DLLHandle(ADDON_UTF8_VALUE(path), false);
 
   if (!handle->isLoaded()) {
     std::string err = handle->getError();
     delete handle;
-    Nan::ThrowError(err.c_str());
-    return;
+    ADDON_THROW_ERROR(err.c_str());
+    ADDON_VOID_RETURN();
   }
 
-  Local<Function> cons = Nan::New(constructor);
-  Local<Object> instance = Nan::NewInstance(cons).ToLocalChecked();
+  auto cons = ADDON_PERSISTENT_GET(constructor);
+  ADDON_OBJECT_TYPE instance = ADDON_NEW_INSTANCE(cons);
 
   DLLHandleWrap* wrap = new DLLHandleWrap();
   wrap->handle_ = handle;
   wrap->Wrap(instance);
 
-  info.GetReturnValue().Set(instance);
+  ADDON_RETURN(instance);
 }
 
-NAN_METHOD(DLLHandleWrap::LoadSystem) {
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("DLL name must be a string");
-    return;
+ADDON_METHOD(DLLHandleWrap::LoadSystem) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("DLL name must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String name(info[0]);
+  ADDON_UTF8(name, ADDON_ARG(0));
 
-  DLLHandle* handle = new DLLHandle(*name, true);
+  DLLHandle* handle = new DLLHandle(ADDON_UTF8_VALUE(name), true);
 
   if (!handle->isLoaded()) {
     std::string err = handle->getError();
     delete handle;
-    Nan::ThrowError(err.c_str());
-    return;
+    ADDON_THROW_ERROR(err.c_str());
+    ADDON_VOID_RETURN();
   }
 
-  Local<Function> cons = Nan::New(constructor);
-  Local<Object> instance = Nan::NewInstance(cons).ToLocalChecked();
+  auto cons = ADDON_PERSISTENT_GET(constructor);
+  ADDON_OBJECT_TYPE instance = ADDON_NEW_INSTANCE(cons);
 
   DLLHandleWrap* wrap = new DLLHandleWrap();
   wrap->handle_ = handle;
   wrap->Wrap(instance);
 
-  info.GetReturnValue().Set(instance);
+  ADDON_RETURN(instance);
 }
 
-NAN_METHOD(DLLHandleWrap::GetFunction) {
-  DLLHandleWrap* wrap = Nan::ObjectWrap::Unwrap<DLLHandleWrap>(info.Holder());
+ADDON_METHOD(DLLHandleWrap::GetFunction) {
+  ADDON_ENV;
+  DLLHandleWrap* wrap = ADDON_UNWRAP(DLLHandleWrap, ADDON_HOLDER());
 
   if (!wrap->handle_ || !wrap->handle_->isLoaded()) {
-    Nan::ThrowError("DLL not loaded");
-    return;
+    ADDON_THROW_ERROR("DLL not loaded");
+    ADDON_VOID_RETURN();
   }
 
   // Arguments: name, returnType, argTypes[], options?
-  if (info.Length() < 3) {
-    Nan::ThrowTypeError("Expected: name, returnType, argTypes[]");
-    return;
+  if (ADDON_ARG_COUNT() < 3) {
+    ADDON_THROW_TYPE_ERROR("Expected: name, returnType, argTypes[]");
+    ADDON_VOID_RETURN();
   }
 
-  if (!info[0]->IsString()) {
-    Nan::ThrowTypeError("Function name must be a string");
-    return;
+  if (!ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Function name must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  if (!info[1]->IsString()) {
-    Nan::ThrowTypeError("Return type must be a string");
-    return;
+  if (!ADDON_IS_STRING(ADDON_ARG(1))) {
+    ADDON_THROW_TYPE_ERROR("Return type must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  if (!info[2]->IsArray()) {
-    Nan::ThrowTypeError("Argument types must be an array");
-    return;
+  if (!ADDON_IS_ARRAY(ADDON_ARG(2))) {
+    ADDON_THROW_TYPE_ERROR("Argument types must be an array");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String funcName(info[0]);
-  Nan::Utf8String returnTypeStr(info[1]);
-  Local<Array> argTypesArr = info[2].As<Array>();
+  ADDON_UTF8(funcName, ADDON_ARG(0));
+  ADDON_UTF8(returnTypeStr, ADDON_ARG(1));
+  ADDON_ARRAY_TYPE argTypesArr = ADDON_AS_ARRAY(ADDON_ARG(2));
 
   // Parse return type
-  ArgType returnType = parseType(*returnTypeStr);
+  ArgType returnType = parseType(ADDON_UTF8_VALUE(returnTypeStr));
 
   // Parse argument types
   std::vector<ArgType> argTypes;
-  for (uint32_t i = 0; i < argTypesArr->Length(); i++) {
-    Local<Value> elem = argTypesArr->Get(i);
-    if (elem->IsString()) {
-      Nan::Utf8String typeStr(elem);
-      argTypes.push_back(parseType(*typeStr));
+  for (uint32_t i = 0; i < ADDON_LENGTH(argTypesArr); i++) {
+    ADDON_VALUE elem = ADDON_GET_INDEX(argTypesArr, i);
+    if (ADDON_IS_STRING(elem)) {
+      ADDON_UTF8(typeStr, elem);
+      argTypes.push_back(parseType(ADDON_UTF8_VALUE(typeStr)));
     }
   }
 
   // Parse options
   CallConvention convention = CALL_CDECL;
-  if (info.Length() >= 4 && info[3]->IsObject()) {
-    Local<Object> opts = info[3].As<Object>();
-    Local<Value> convVal = opts->Get(Nan::New("callConvention").ToLocalChecked());
-    if (convVal->IsString()) {
-      Nan::Utf8String convStr(convVal);
-      if (strcmp(*convStr, "stdcall") == 0) {
+  if (ADDON_ARG_COUNT() >= 4 && ADDON_IS_OBJECT(ADDON_ARG(3))) {
+    ADDON_OBJECT_TYPE opts = ADDON_AS_OBJECT(ADDON_ARG(3));
+    ADDON_VALUE convVal = ADDON_GET(opts, "callConvention");
+    if (ADDON_IS_STRING(convVal)) {
+      ADDON_UTF8(convStr, convVal);
+      if (strcmp(ADDON_UTF8_VALUE(convStr), "stdcall") == 0) {
         convention = CALL_STDCALL;
-      } else if (strcmp(*convStr, "fastcall") == 0) {
+      } else if (strcmp(ADDON_UTF8_VALUE(convStr), "fastcall") == 0) {
         convention = CALL_FASTCALL;
       }
     }
   }
 
   // Get function pointer
-  void* funcPtr = wrap->handle_->getFunction(*funcName);
+  void* funcPtr = wrap->handle_->getFunction(ADDON_UTF8_VALUE(funcName));
 
   if (funcPtr == NULL) {
-    Nan::ThrowError(wrap->handle_->getError().c_str());
-    return;
+    ADDON_THROW_ERROR(wrap->handle_->getError().c_str());
+    ADDON_VOID_RETURN();
   }
 
   // Create DLLFunction
   DLLFunction* func = new DLLFunction(funcPtr, returnType, argTypes, convention);
-  Local<Object> funcObj = DLLFunctionWrap::Create(func);
+  ADDON_OBJECT_TYPE funcObj = DLLFunctionWrap::Create(func);
 
-  info.GetReturnValue().Set(funcObj);
+  ADDON_RETURN(funcObj);
 }
 
-NAN_METHOD(DLLHandleWrap::GetSymbol) {
-  DLLHandleWrap* wrap = Nan::ObjectWrap::Unwrap<DLLHandleWrap>(info.Holder());
+ADDON_METHOD(DLLHandleWrap::GetSymbol) {
+  ADDON_ENV;
+  DLLHandleWrap* wrap = ADDON_UNWRAP(DLLHandleWrap, ADDON_HOLDER());
 
   if (!wrap->handle_ || !wrap->handle_->isLoaded()) {
-    Nan::ThrowError("DLL not loaded");
-    return;
+    ADDON_THROW_ERROR("DLL not loaded");
+    ADDON_VOID_RETURN();
   }
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Symbol name must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Symbol name must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String name(info[0]);
-  void* sym = wrap->handle_->getSymbol(*name);
+  ADDON_UTF8(name, ADDON_ARG(0));
+  void* sym = wrap->handle_->getSymbol(ADDON_UTF8_VALUE(name));
 
   if (sym == NULL) {
-    info.GetReturnValue().Set(Nan::Null());
-  } else {
-    info.GetReturnValue().Set(Nan::New<Number>(reinterpret_cast<uintptr_t>(sym)));
+    ADDON_RETURN_NULL();
   }
+  ADDON_RETURN(ADDON_NUMBER(reinterpret_cast<uintptr_t>(sym)));
 }
 
-NAN_METHOD(DLLHandleWrap::Close) {
-  DLLHandleWrap* wrap = Nan::ObjectWrap::Unwrap<DLLHandleWrap>(info.Holder());
+ADDON_METHOD(DLLHandleWrap::Close) {
+  ADDON_ENV;
+  DLLHandleWrap* wrap = ADDON_UNWRAP(DLLHandleWrap, ADDON_HOLDER());
 
   if (wrap->handle_) {
     wrap->handle_->close();
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(DLLHandleWrap::GetPath) {
-  DLLHandleWrap* wrap = Nan::ObjectWrap::Unwrap<DLLHandleWrap>(info.Holder());
+ADDON_METHOD(DLLHandleWrap::GetPath) {
+  ADDON_ENV;
+  DLLHandleWrap* wrap = ADDON_UNWRAP(DLLHandleWrap, ADDON_HOLDER());
 
   if (wrap->handle_) {
-    info.GetReturnValue().Set(
-      Nan::New<String>(wrap->handle_->path().c_str()).ToLocalChecked()
-    );
-  } else {
-    info.GetReturnValue().Set(Nan::Null());
+    ADDON_RETURN(ADDON_STRING(wrap->handle_->path().c_str()));
   }
+  ADDON_RETURN_NULL();
 }
 
-NAN_METHOD(DLLHandleWrap::GetError) {
-  DLLHandleWrap* wrap = Nan::ObjectWrap::Unwrap<DLLHandleWrap>(info.Holder());
+ADDON_METHOD(DLLHandleWrap::GetError) {
+  ADDON_ENV;
+  DLLHandleWrap* wrap = ADDON_UNWRAP(DLLHandleWrap, ADDON_HOLDER());
 
   if (wrap->handle_) {
     const std::string& err = wrap->handle_->getError();
-    if (err.empty()) {
-      info.GetReturnValue().Set(Nan::Null());
-    } else {
-      info.GetReturnValue().Set(Nan::New<String>(err.c_str()).ToLocalChecked());
+    if (!err.empty()) {
+      ADDON_RETURN(ADDON_STRING(err.c_str()));
     }
-  } else {
-    info.GetReturnValue().Set(Nan::Null());
   }
+  ADDON_RETURN_NULL();
 }
 
 // DLLFunction wrapper implementation
 
-Local<Object> DLLFunctionWrap::Create(DLLFunction* func) {
-  Nan::EscapableHandleScope scope;
+ADDON_OBJECT_TYPE DLLFunctionWrap::Create(DLLFunction* func) {
+  ADDON_ESCAPABLE_SCOPE();
 
-  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>();
-  tpl->SetClassName(Nan::New("DLLFunction").ToLocalChecked());
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+  auto tpl = ADDON_NEW_CTOR_TEMPLATE();
+  ADDON_SET_CLASS_NAME(tpl, "DLLFunction");
+  ADDON_SET_INTERNAL_FIELD_COUNT(tpl, 1);
 
-  Nan::SetPrototypeMethod(tpl, "call", Call);
-  Nan::SetPrototypeMethod(tpl, "getPointer", GetPointer);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "call", Call);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "getPointer", GetPointer);
 
-  Local<Object> instance = Nan::NewInstance(tpl->GetFunction()).ToLocalChecked();
+  ADDON_OBJECT_TYPE instance = ADDON_NEW_INSTANCE(ADDON_GET_CTOR_FUNCTION(tpl));
 
   DLLFunctionWrap* wrap = new DLLFunctionWrap();
   wrap->func_ = func;
   wrap->Wrap(instance);
 
-  return scope.Escape(instance);
+  return ADDON_ESCAPE(instance);
 }
 
-NAN_METHOD(DLLFunctionWrap::Call) {
-  DLLFunctionWrap* wrap = Nan::ObjectWrap::Unwrap<DLLFunctionWrap>(info.Holder());
+ADDON_METHOD(DLLFunctionWrap::Call) {
+  ADDON_ENV;
+  DLLFunctionWrap* wrap = ADDON_UNWRAP(DLLFunctionWrap, ADDON_HOLDER());
 
   if (!wrap->func_) {
-    Nan::ThrowError("Function not initialized");
-    return;
+    ADDON_THROW_ERROR("Function not initialized");
+    ADDON_VOID_RETURN();
   }
 
   // Convert JS arguments to FunctionArgs
   std::vector<FunctionArg> args;
 
-  for (int i = 0; i < info.Length(); i++) {
+  for (int i = 0; i < ADDON_ARG_COUNT(); i++) {
     FunctionArg arg;
 
-    Local<Value> val = info[i];
+    ADDON_VALUE val = ADDON_ARG(i);
 
-    if (val->IsNull() || val->IsUndefined()) {
+    if (ADDON_IS_NULL(val) || ADDON_IS_UNDEFINED(val)) {
       arg.type = TYPE_POINTER;
       arg.value.ptrVal = NULL;
     }
-    else if (val->IsBoolean()) {
+    else if (ADDON_IS_BOOLEAN(val)) {
       arg.type = TYPE_BOOL;
-      arg.value.boolVal = val->BooleanValue();
+      arg.value.boolVal = ADDON_BOOL_VALUE(val);
     }
-    else if (val->IsNumber()) {
-      double num = Nan::To<double>(val).FromJust();
+    else if (ADDON_IS_NUMBER(val)) {
+      double num = ADDON_TO_DOUBLE(val);
       // Check if it's an integer
       if (num == static_cast<double>(static_cast<int32_t>(num))) {
         arg.type = TYPE_INT32;
@@ -338,25 +339,25 @@ NAN_METHOD(DLLFunctionWrap::Call) {
         arg.value.doubleVal = num;
       }
     }
-    else if (val->IsString()) {
+    else if (ADDON_IS_STRING(val)) {
       arg.type = TYPE_STRING;
-      Nan::Utf8String str(val);
-      arg.strValue = *str;
+      ADDON_UTF8(str, val);
+      arg.strValue = ADDON_UTF8_VALUE(str);
       arg.value.ptrVal = const_cast<char*>(arg.strValue.c_str());
     }
-    else if (val->IsObject()) {
-      Local<Object> obj = val.As<Object>();
+    else if (ADDON_IS_OBJECT(val)) {
+      ADDON_OBJECT_TYPE obj = ADDON_AS_OBJECT(val);
 
       // Check for Buffer
-      if (node::Buffer::HasInstance(obj)) {
+      if (ADDON_BUFFER_IS(obj)) {
         arg.type = TYPE_BUFFER;
-        arg.value.ptrVal = node::Buffer::Data(obj);
-        arg.bufferSize = node::Buffer::Length(obj);
+        arg.value.ptrVal = ADDON_BUFFER_DATA(obj);
+        arg.bufferSize = ADDON_BUFFER_LENGTH(obj);
       }
       // Check for TypedArray
-      else if (obj->HasIndexedPropertiesInExternalArrayData()) {
+      else if (ADDON_IS_TYPEDARRAY(obj)) {
         arg.type = TYPE_POINTER;
-        arg.value.ptrVal = obj->GetIndexedPropertiesExternalArrayData();
+        arg.value.ptrVal = ADDON_GET_TYPEDARRAY_DATA(obj);
       }
       else {
         arg.type = TYPE_POINTER;
@@ -377,171 +378,163 @@ NAN_METHOD(DLLFunctionWrap::Call) {
   // Convert result to JS value
   switch (result.type) {
     case TYPE_VOID:
-      info.GetReturnValue().Set(Nan::Undefined());
-      break;
+      ADDON_RETURN_UNDEFINED();
 
     case TYPE_BOOL:
-      info.GetReturnValue().Set(Nan::New<Boolean>(result.value.boolVal));
-      break;
+      ADDON_RETURN(ADDON_BOOLEAN(result.value.boolVal));
 
     case TYPE_INT8:
     case TYPE_INT16:
     case TYPE_INT32:
-      info.GetReturnValue().Set(Nan::New<Integer>(result.value.int32Val));
-      break;
+      ADDON_RETURN(ADDON_INTEGER(result.value.int32Val));
 
     case TYPE_UINT8:
     case TYPE_UINT16:
     case TYPE_UINT32:
-      info.GetReturnValue().Set(Nan::New<Integer>(static_cast<int32_t>(result.value.uint32Val)));
-      break;
+      ADDON_RETURN(ADDON_INTEGER(static_cast<int32_t>(result.value.uint32Val)));
 
     case TYPE_INT64:
     case TYPE_UINT64:
       // Use Number (may lose precision for large values)
-      info.GetReturnValue().Set(Nan::New<Number>(static_cast<double>(result.value.int64Val)));
-      break;
+      ADDON_RETURN(ADDON_NUMBER(result.value.int64Val));
 
     case TYPE_FLOAT:
-      info.GetReturnValue().Set(Nan::New<Number>(result.value.floatVal));
-      break;
+      ADDON_RETURN(ADDON_NUMBER(result.value.floatVal));
 
     case TYPE_DOUBLE:
-      info.GetReturnValue().Set(Nan::New<Number>(result.value.doubleVal));
-      break;
+      ADDON_RETURN(ADDON_NUMBER(result.value.doubleVal));
 
     case TYPE_POINTER:
     case TYPE_STRING:
     case TYPE_WSTRING:
     case TYPE_BUFFER:
       if (result.value.ptrVal == NULL) {
-        info.GetReturnValue().Set(Nan::Null());
-      } else {
-        info.GetReturnValue().Set(
-          Nan::New<Number>(reinterpret_cast<uintptr_t>(result.value.ptrVal))
-        );
+        ADDON_RETURN_NULL();
       }
-      break;
+      ADDON_RETURN(ADDON_NUMBER(reinterpret_cast<uintptr_t>(result.value.ptrVal)));
 
     default:
-      info.GetReturnValue().Set(Nan::Undefined());
-      break;
+      ADDON_RETURN_UNDEFINED();
   }
 }
 
-NAN_METHOD(DLLFunctionWrap::GetPointer) {
-  DLLFunctionWrap* wrap = Nan::ObjectWrap::Unwrap<DLLFunctionWrap>(info.Holder());
+ADDON_METHOD(DLLFunctionWrap::GetPointer) {
+  ADDON_ENV;
+  DLLFunctionWrap* wrap = ADDON_UNWRAP(DLLFunctionWrap, ADDON_HOLDER());
 
   if (wrap->func_) {
-    info.GetReturnValue().Set(
-      Nan::New<Number>(reinterpret_cast<uintptr_t>(wrap->func_->pointer()))
-    );
-  } else {
-    info.GetReturnValue().Set(Nan::New<Number>(0));
+    ADDON_RETURN(ADDON_NUMBER(reinterpret_cast<uintptr_t>(wrap->func_->pointer())));
   }
+  ADDON_RETURN(ADDON_NUMBER(0));
 }
 
 // Memory allocation helpers
-NAN_METHOD(AllocMemory) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Size must be a number");
-    return;
+ADDON_METHOD(AllocMemory) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Size must be a number");
+    ADDON_VOID_RETURN();
   }
 
-  size_t size = static_cast<size_t>(Nan::To<uint32_t>(info[0]).FromJust());
+  size_t size = static_cast<size_t>(ADDON_TO_UINT32(ADDON_ARG(0)));
   void* ptr = malloc(size);
 
   if (ptr == NULL) {
-    Nan::ThrowError("Memory allocation failed");
-    return;
+    ADDON_THROW_ERROR("Memory allocation failed");
+    ADDON_VOID_RETURN();
   }
 
   memset(ptr, 0, size);
 
-  info.GetReturnValue().Set(Nan::New<Number>(reinterpret_cast<uintptr_t>(ptr)));
+  ADDON_RETURN(ADDON_NUMBER(reinterpret_cast<uintptr_t>(ptr)));
 }
 
-NAN_METHOD(FreeMemory) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Pointer must be a number");
-    return;
+ADDON_METHOD(FreeMemory) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Pointer must be a number");
+    ADDON_VOID_RETURN();
   }
 
-  uintptr_t addr = static_cast<uintptr_t>(Nan::To<double>(info[0]).FromJust());
+  uintptr_t addr = static_cast<uintptr_t>(ADDON_TO_DOUBLE(ADDON_ARG(0)));
   void* ptr = reinterpret_cast<void*>(addr);
 
   if (ptr != NULL) {
     free(ptr);
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(ReadInt32) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Pointer must be a number");
-    return;
+ADDON_METHOD(ReadInt32) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Pointer must be a number");
+    ADDON_VOID_RETURN();
   }
 
-  uintptr_t addr = static_cast<uintptr_t>(Nan::To<double>(info[0]).FromJust());
+  uintptr_t addr = static_cast<uintptr_t>(ADDON_TO_DOUBLE(ADDON_ARG(0)));
 
   int offset = 0;
-  if (info.Length() >= 2 && info[1]->IsNumber()) {
-    offset = Nan::To<int>(info[1]).FromJust();
+  if (ADDON_ARG_COUNT() >= 2 && ADDON_IS_NUMBER(ADDON_ARG(1))) {
+    offset = ADDON_TO_INT(ADDON_ARG(1));
   }
 
   int32_t* ptr = reinterpret_cast<int32_t*>(addr + offset);
-  info.GetReturnValue().Set(Nan::New<Integer>(*ptr));
+  ADDON_RETURN(ADDON_INTEGER(*ptr));
 }
 
-NAN_METHOD(WriteInt32) {
-  if (info.Length() < 2) {
-    Nan::ThrowTypeError("Expected: pointer, value[, offset]");
-    return;
+ADDON_METHOD(WriteInt32) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 2) {
+    ADDON_THROW_TYPE_ERROR("Expected: pointer, value[, offset]");
+    ADDON_VOID_RETURN();
   }
 
-  uintptr_t addr = static_cast<uintptr_t>(Nan::To<double>(info[0]).FromJust());
-  int32_t value = Nan::To<int32_t>(info[1]).FromJust();
+  uintptr_t addr = static_cast<uintptr_t>(ADDON_TO_DOUBLE(ADDON_ARG(0)));
+  int32_t value = ADDON_TO_INT32(ADDON_ARG(1));
 
   int offset = 0;
-  if (info.Length() >= 3 && info[2]->IsNumber()) {
-    offset = Nan::To<int>(info[2]).FromJust();
+  if (ADDON_ARG_COUNT() >= 3 && ADDON_IS_NUMBER(ADDON_ARG(2))) {
+    offset = ADDON_TO_INT(ADDON_ARG(2));
   }
 
   int32_t* ptr = reinterpret_cast<int32_t*>(addr + offset);
   *ptr = value;
+  ADDON_VOID_RETURN();
 }
 
 // Module initialization
-void InitCallDLL(Local<Object> exports) {
-  Local<Object> calldll = Nan::New<Object>();
+void InitCallDLL(ADDON_INIT_PARAMS) {
+  ADDON_OBJECT_TYPE calldll = ADDON_OBJECT();
 
   DLLHandleWrap::Init(calldll);
 
   // Memory functions
-  Nan::SetMethod(calldll, "alloc", AllocMemory);
-  Nan::SetMethod(calldll, "free", FreeMemory);
-  Nan::SetMethod(calldll, "readInt32", ReadInt32);
-  Nan::SetMethod(calldll, "writeInt32", WriteInt32);
+  ADDON_SET_METHOD(calldll, "alloc", AllocMemory);
+  ADDON_SET_METHOD(calldll, "free", FreeMemory);
+  ADDON_SET_METHOD(calldll, "readInt32", ReadInt32);
+  ADDON_SET_METHOD(calldll, "writeInt32", WriteInt32);
 
   // Type constants
-  Local<Object> types = Nan::New<Object>();
-  types->Set(Nan::New("void").ToLocalChecked(), Nan::New("void").ToLocalChecked());
-  types->Set(Nan::New("bool").ToLocalChecked(), Nan::New("bool").ToLocalChecked());
-  types->Set(Nan::New("int8").ToLocalChecked(), Nan::New("int8").ToLocalChecked());
-  types->Set(Nan::New("uint8").ToLocalChecked(), Nan::New("uint8").ToLocalChecked());
-  types->Set(Nan::New("int16").ToLocalChecked(), Nan::New("int16").ToLocalChecked());
-  types->Set(Nan::New("uint16").ToLocalChecked(), Nan::New("uint16").ToLocalChecked());
-  types->Set(Nan::New("int32").ToLocalChecked(), Nan::New("int32").ToLocalChecked());
-  types->Set(Nan::New("uint32").ToLocalChecked(), Nan::New("uint32").ToLocalChecked());
-  types->Set(Nan::New("int64").ToLocalChecked(), Nan::New("int64").ToLocalChecked());
-  types->Set(Nan::New("uint64").ToLocalChecked(), Nan::New("uint64").ToLocalChecked());
-  types->Set(Nan::New("float").ToLocalChecked(), Nan::New("float").ToLocalChecked());
-  types->Set(Nan::New("double").ToLocalChecked(), Nan::New("double").ToLocalChecked());
-  types->Set(Nan::New("pointer").ToLocalChecked(), Nan::New("pointer").ToLocalChecked());
-  types->Set(Nan::New("string").ToLocalChecked(), Nan::New("string").ToLocalChecked());
-  types->Set(Nan::New("wstring").ToLocalChecked(), Nan::New("wstring").ToLocalChecked());
-  types->Set(Nan::New("buffer").ToLocalChecked(), Nan::New("buffer").ToLocalChecked());
+  ADDON_OBJECT_TYPE types = ADDON_OBJECT();
+  ADDON_SET(types, "void", ADDON_STRING("void"));
+  ADDON_SET(types, "bool", ADDON_STRING("bool"));
+  ADDON_SET(types, "int8", ADDON_STRING("int8"));
+  ADDON_SET(types, "uint8", ADDON_STRING("uint8"));
+  ADDON_SET(types, "int16", ADDON_STRING("int16"));
+  ADDON_SET(types, "uint16", ADDON_STRING("uint16"));
+  ADDON_SET(types, "int32", ADDON_STRING("int32"));
+  ADDON_SET(types, "uint32", ADDON_STRING("uint32"));
+  ADDON_SET(types, "int64", ADDON_STRING("int64"));
+  ADDON_SET(types, "uint64", ADDON_STRING("uint64"));
+  ADDON_SET(types, "float", ADDON_STRING("float"));
+  ADDON_SET(types, "double", ADDON_STRING("double"));
+  ADDON_SET(types, "pointer", ADDON_STRING("pointer"));
+  ADDON_SET(types, "string", ADDON_STRING("string"));
+  ADDON_SET(types, "wstring", ADDON_STRING("wstring"));
+  ADDON_SET(types, "buffer", ADDON_STRING("buffer"));
 
-  calldll->Set(Nan::New("types").ToLocalChecked(), types);
+  ADDON_SET(calldll, "types", types);
 
-  exports->Set(Nan::New("calldll").ToLocalChecked(), calldll);
+  ADDON_SET(exports, "calldll", calldll);
 }

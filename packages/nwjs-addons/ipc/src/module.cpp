@@ -1,122 +1,124 @@
-#include <nan.h>
+#include "addon_api.h"
 #include "ipc.h"
 #include <map>
 
-using namespace v8;
 using namespace ipc;
 
 // Store channels by ID
 static std::map<uint32_t, Channel*> channels;
 static uint32_t nextChannelId = 1;
 
-NAN_METHOD(IsProcessRunning) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Argument must be a number (process ID)");
-    return;
+ADDON_METHOD(IsProcessRunning) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a number (process ID)");
+    ADDON_VOID_RETURN();
   }
 
-  uint32_t pid = Nan::To<uint32_t>(info[0]).FromJust();
+  uint32_t pid = ADDON_TO_UINT32(ADDON_ARG(0));
   bool running = isProcessRunning(static_cast<DWORD>(pid));
-  info.GetReturnValue().Set(Nan::New(running));
+  ADDON_RETURN(ADDON_BOOL(running));
 }
 
-NAN_METHOD(GenerateChannelName) {
+ADDON_METHOD(GenerateChannelName) {
+  ADDON_ENV;
   std::string name = generateChannelName();
-  info.GetReturnValue().Set(Nan::New(name).ToLocalChecked());
+  ADDON_RETURN(ADDON_STRING(name));
 }
 
-NAN_METHOD(CreateChannel) {
-  if (info.Length() < 2 || !info[0]->IsString() || !info[1]->IsBoolean()) {
-    Nan::ThrowTypeError("Arguments: (name: string, isServer: boolean)");
-    return;
+ADDON_METHOD(CreateChannel) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 2 || !ADDON_IS_STRING(ADDON_ARG(0)) || !ADDON_IS_BOOLEAN(ADDON_ARG(1))) {
+    ADDON_THROW_TYPE_ERROR("Arguments: (name: string, isServer: boolean)");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String name(info[0]);
-  bool isServer = Nan::To<bool>(info[1]).FromJust();
+  ADDON_UTF8(name, ADDON_ARG(0));
+  bool isServer = ADDON_TO_BOOL(ADDON_ARG(1));
 
-  Channel* channel = new Channel(std::string(*name), isServer);
+  Channel* channel = new Channel(std::string(ADDON_UTF8_VALUE(name)), isServer);
   uint32_t id = nextChannelId++;
   channels[id] = channel;
 
-  info.GetReturnValue().Set(Nan::New(id));
+  ADDON_RETURN(ADDON_UINT(id));
 }
 
-NAN_METHOD(ChannelConnect) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Argument must be a channel ID");
-    return;
+ADDON_METHOD(ChannelConnect) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a channel ID");
+    ADDON_VOID_RETURN();
   }
 
-  uint32_t id = Nan::To<uint32_t>(info[0]).FromJust();
+  uint32_t id = ADDON_TO_UINT32(ADDON_ARG(0));
 
   std::map<uint32_t, Channel*>::iterator it = channels.find(id);
   if (it == channels.end()) {
-    info.GetReturnValue().Set(Nan::New(false));
-    return;
+    ADDON_RETURN(ADDON_BOOL(false));
   }
 
   bool success = it->second->connect();
-  info.GetReturnValue().Set(Nan::New(success));
+  ADDON_RETURN(ADDON_BOOL(success));
 }
 
-NAN_METHOD(ChannelSend) {
-  if (info.Length() < 2 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Arguments: (channelId: number, data: string|Buffer)");
-    return;
+ADDON_METHOD(ChannelSend) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 2 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Arguments: (channelId: number, data: string|Buffer)");
+    ADDON_VOID_RETURN();
   }
 
-  uint32_t id = Nan::To<uint32_t>(info[0]).FromJust();
+  uint32_t id = ADDON_TO_UINT32(ADDON_ARG(0));
 
   std::map<uint32_t, Channel*>::iterator it = channels.find(id);
   if (it == channels.end()) {
-    info.GetReturnValue().Set(Nan::New(false));
-    return;
+    ADDON_RETURN(ADDON_BOOL(false));
   }
 
   bool success = false;
 
-  if (info[1]->IsString()) {
-    Nan::Utf8String str(info[1]);
-    success = it->second->send(*str, str.length());
-  } else if (node::Buffer::HasInstance(info[1])) {
-    char* data = node::Buffer::Data(info[1]);
-    size_t length = node::Buffer::Length(info[1]);
+  if (ADDON_IS_STRING(ADDON_ARG(1))) {
+    ADDON_UTF8(str, ADDON_ARG(1));
+    success = it->second->send(ADDON_UTF8_VALUE(str), ADDON_UTF8_LENGTH(str));
+  } else if (ADDON_BUFFER_IS(ADDON_ARG(1))) {
+    char* data = ADDON_BUFFER_DATA(ADDON_ARG(1));
+    size_t length = ADDON_BUFFER_LENGTH(ADDON_ARG(1));
     success = it->second->send(data, length);
   }
 
-  info.GetReturnValue().Set(Nan::New(success));
+  ADDON_RETURN(ADDON_BOOL(success));
 }
 
-NAN_METHOD(ChannelReceive) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Argument must be a channel ID");
-    return;
+ADDON_METHOD(ChannelReceive) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a channel ID");
+    ADDON_VOID_RETURN();
   }
 
-  uint32_t id = Nan::To<uint32_t>(info[0]).FromJust();
+  uint32_t id = ADDON_TO_UINT32(ADDON_ARG(0));
 
   std::map<uint32_t, Channel*>::iterator it = channels.find(id);
   if (it == channels.end()) {
-    info.GetReturnValue().SetNull();
-    return;
+    ADDON_RETURN_NULL();
   }
 
   std::string data = it->second->receive();
 
   if (data.empty()) {
-    info.GetReturnValue().SetNull();
-  } else {
-    info.GetReturnValue().Set(Nan::CopyBuffer(data.c_str(), data.size()).ToLocalChecked());
+    ADDON_RETURN_NULL();
   }
+  ADDON_RETURN(ADDON_COPY_BUFFER(data.c_str(), data.size()));
 }
 
-NAN_METHOD(ChannelClose) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Argument must be a channel ID");
-    return;
+ADDON_METHOD(ChannelClose) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a channel ID");
+    ADDON_VOID_RETURN();
   }
 
-  uint32_t id = Nan::To<uint32_t>(info[0]).FromJust();
+  uint32_t id = ADDON_TO_UINT32(ADDON_ARG(0));
 
   std::map<uint32_t, Channel*>::iterator it = channels.find(id);
   if (it != channels.end()) {
@@ -124,67 +126,51 @@ NAN_METHOD(ChannelClose) {
     delete it->second;
     channels.erase(it);
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(ChannelIsConnected) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Argument must be a channel ID");
-    return;
+ADDON_METHOD(ChannelIsConnected) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a channel ID");
+    ADDON_VOID_RETURN();
   }
 
-  uint32_t id = Nan::To<uint32_t>(info[0]).FromJust();
+  uint32_t id = ADDON_TO_UINT32(ADDON_ARG(0));
 
   std::map<uint32_t, Channel*>::iterator it = channels.find(id);
   if (it == channels.end()) {
-    info.GetReturnValue().Set(Nan::New(false));
-    return;
+    ADDON_RETURN(ADDON_BOOL(false));
   }
 
-  info.GetReturnValue().Set(Nan::New(it->second->isConnected()));
+  ADDON_RETURN(ADDON_BOOL(it->second->isConnected()));
 }
 
-NAN_METHOD(ChannelIsServer) {
-  if (info.Length() < 1 || !info[0]->IsNumber()) {
-    Nan::ThrowTypeError("Argument must be a channel ID");
-    return;
+ADDON_METHOD(ChannelIsServer) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_NUMBER(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a channel ID");
+    ADDON_VOID_RETURN();
   }
 
-  uint32_t id = Nan::To<uint32_t>(info[0]).FromJust();
+  uint32_t id = ADDON_TO_UINT32(ADDON_ARG(0));
 
   std::map<uint32_t, Channel*>::iterator it = channels.find(id);
   if (it == channels.end()) {
-    info.GetReturnValue().Set(Nan::New(false));
-    return;
+    ADDON_RETURN(ADDON_BOOL(false));
   }
 
-  info.GetReturnValue().Set(Nan::New(it->second->isServer()));
+  ADDON_RETURN(ADDON_BOOL(it->second->isServer()));
 }
 
-void InitIPC(Local<Object> exports) {
-  Nan::Set(exports, Nan::New("ipcIsProcessRunning").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(IsProcessRunning)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("ipcGenerateChannelName").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(GenerateChannelName)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("ipcCreateChannel").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(CreateChannel)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("ipcChannelConnect").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(ChannelConnect)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("ipcChannelSend").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(ChannelSend)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("ipcChannelReceive").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(ChannelReceive)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("ipcChannelClose").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(ChannelClose)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("ipcChannelIsConnected").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(ChannelIsConnected)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("ipcChannelIsServer").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(ChannelIsServer)).ToLocalChecked());
+void InitIPC(ADDON_INIT_PARAMS) {
+  ADDON_EXPORT_FUNCTION(exports, "ipcIsProcessRunning", IsProcessRunning);
+  ADDON_EXPORT_FUNCTION(exports, "ipcGenerateChannelName", GenerateChannelName);
+  ADDON_EXPORT_FUNCTION(exports, "ipcCreateChannel", CreateChannel);
+  ADDON_EXPORT_FUNCTION(exports, "ipcChannelConnect", ChannelConnect);
+  ADDON_EXPORT_FUNCTION(exports, "ipcChannelSend", ChannelSend);
+  ADDON_EXPORT_FUNCTION(exports, "ipcChannelReceive", ChannelReceive);
+  ADDON_EXPORT_FUNCTION(exports, "ipcChannelClose", ChannelClose);
+  ADDON_EXPORT_FUNCTION(exports, "ipcChannelIsConnected", ChannelIsConnected);
+  ADDON_EXPORT_FUNCTION(exports, "ipcChannelIsServer", ChannelIsServer);
 }

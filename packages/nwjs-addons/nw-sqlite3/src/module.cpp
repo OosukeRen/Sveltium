@@ -1,26 +1,25 @@
-#include <nan.h>
+#include "addon_api.h"
 #include "database.h"
 #include "statement.h"
 
-using namespace v8;
 using namespace nw_sqlite3;
 
 // Forward declarations
 class StatementWrap;
 
 // Database wrapper
-class DatabaseWrap : public Nan::ObjectWrap {
+class DatabaseWrap : public ADDON_OBJECT_WRAP {
 public:
-  static void Init(Local<Object> exports);
-  static NAN_METHOD(New);
-  static NAN_METHOD(Exec);
-  static NAN_METHOD(Prepare);
-  static NAN_METHOD(Close);
-  static NAN_GETTER(GetOpen);
-  static NAN_GETTER(GetPath);
-  static NAN_GETTER(GetInTransaction);
+  static void Init(ADDON_INIT_PARAMS);
+  static ADDON_METHOD(New);
+  static ADDON_METHOD(Exec);
+  static ADDON_METHOD(Prepare);
+  static ADDON_METHOD(Close);
+  static ADDON_GETTER(GetOpen);
+  static ADDON_GETTER(GetPath);
+  static ADDON_GETTER(GetInTransaction);
 
-  static Nan::Persistent<Function> constructor;
+  static ADDON_PERSISTENT_FUNCTION constructor;
 
   Database* db_;
 
@@ -34,23 +33,23 @@ private:
   }
 };
 
-Nan::Persistent<Function> DatabaseWrap::constructor;
+ADDON_PERSISTENT_FUNCTION DatabaseWrap::constructor;
 
 // Statement wrapper
-class StatementWrap : public Nan::ObjectWrap {
+class StatementWrap : public ADDON_OBJECT_WRAP {
 public:
-  static void Init(Local<Object> exports);
-  static Local<Object> Create(Statement* stmt);
-  static NAN_METHOD(Run);
-  static NAN_METHOD(Get);
-  static NAN_METHOD(All);
-  static NAN_METHOD(Reset);
-  static NAN_METHOD(Finalize);
-  static NAN_GETTER(GetSource);
-  static NAN_GETTER(GetReader);
+  static void Init(ADDON_INIT_PARAMS);
+  static ADDON_OBJECT_TYPE Create(Statement* stmt);
+  static ADDON_METHOD(Run);
+  static ADDON_METHOD(Get);
+  static ADDON_METHOD(All);
+  static ADDON_METHOD(Reset);
+  static ADDON_METHOD(Finalize);
+  static ADDON_GETTER(GetSource);
+  static ADDON_GETTER(GetReader);
 
-  static Nan::Persistent<FunctionTemplate> constructorTemplate;
-  static Nan::Persistent<Function> constructor;
+  static ADDON_PERSISTENT_TEMPLATE constructorTemplate;
+  static ADDON_PERSISTENT_FUNCTION constructor;
 
   Statement* stmt_;
 
@@ -64,203 +63,207 @@ private:
   }
 
   // Bind JS value to statement parameter
-  static void bindValue(Statement* stmt, int index, Local<Value> val);
+  static void bindValue(Statement* stmt, int index, ADDON_VALUE val);
 
   // Convert row to JS object
-  static Local<Object> rowToObject(Statement* stmt);
+  static ADDON_OBJECT_TYPE rowToObject(Statement* stmt);
 };
 
-Nan::Persistent<FunctionTemplate> StatementWrap::constructorTemplate;
-Nan::Persistent<Function> StatementWrap::constructor;
+ADDON_PERSISTENT_TEMPLATE StatementWrap::constructorTemplate;
+ADDON_PERSISTENT_FUNCTION StatementWrap::constructor;
 
 // ============================================
 // Database Implementation
 // ============================================
 
-void DatabaseWrap::Init(Local<Object> exports) {
-  Nan::HandleScope scope;
+void DatabaseWrap::Init(ADDON_INIT_PARAMS) {
+  ADDON_HANDLE_SCOPE();
 
-  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(New);
-  tpl->SetClassName(Nan::New("Database").ToLocalChecked());
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+  auto tpl = ADDON_NEW_CTOR_TEMPLATE_WITH(New);
+  ADDON_SET_CLASS_NAME(tpl, "Database");
+  ADDON_SET_INTERNAL_FIELD_COUNT(tpl, 1);
 
   // Methods
-  Nan::SetPrototypeMethod(tpl, "exec", Exec);
-  Nan::SetPrototypeMethod(tpl, "prepare", Prepare);
-  Nan::SetPrototypeMethod(tpl, "close", Close);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "exec", Exec);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "prepare", Prepare);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "close", Close);
 
   // Accessors
-  Nan::SetAccessor(tpl->InstanceTemplate(),
-    Nan::New("open").ToLocalChecked(), GetOpen);
-  Nan::SetAccessor(tpl->InstanceTemplate(),
-    Nan::New("path").ToLocalChecked(), GetPath);
-  Nan::SetAccessor(tpl->InstanceTemplate(),
-    Nan::New("inTransaction").ToLocalChecked(), GetInTransaction);
+  ADDON_SET_ACCESSOR(tpl, "open", GetOpen);
+  ADDON_SET_ACCESSOR(tpl, "path", GetPath);
+  ADDON_SET_ACCESSOR(tpl, "inTransaction", GetInTransaction);
 
-  constructor.Reset(tpl->GetFunction());
-  exports->Set(Nan::New("Database").ToLocalChecked(), tpl->GetFunction());
+  ADDON_PERSISTENT_RESET(constructor, ADDON_GET_CTOR_FUNCTION(tpl));
+  ADDON_SET(exports, "Database", ADDON_GET_CTOR_FUNCTION(tpl));
 }
 
-NAN_METHOD(DatabaseWrap::New) {
-  if (!info.IsConstructCall()) {
-    Nan::ThrowError("Use 'new' to create Database");
-    return;
+ADDON_METHOD(DatabaseWrap::New) {
+  ADDON_ENV;
+  if (!ADDON_IS_CONSTRUCT_CALL()) {
+    ADDON_THROW_ERROR("Use 'new' to create Database");
+    ADDON_VOID_RETURN();
   }
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Path must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Path must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String path(info[0]);
+  ADDON_UTF8(path, ADDON_ARG(0));
   bool readonly = false;
 
-  if (info.Length() >= 2 && info[1]->IsObject()) {
-    Local<Object> opts = info[1].As<Object>();
-    Local<Value> roVal = opts->Get(Nan::New("readonly").ToLocalChecked());
-    if (roVal->IsBoolean()) {
-      readonly = roVal->BooleanValue();
+  if (ADDON_ARG_COUNT() >= 2 && ADDON_IS_OBJECT(ADDON_ARG(1))) {
+    ADDON_OBJECT_TYPE opts = ADDON_AS_OBJECT(ADDON_ARG(1));
+    ADDON_VALUE roVal = ADDON_GET(opts, "readonly");
+    if (ADDON_IS_BOOLEAN(roVal)) {
+      readonly = ADDON_BOOL_VALUE(roVal);
     }
   }
 
   try {
     DatabaseWrap* wrap = new DatabaseWrap();
-    wrap->db_ = new Database(*path, readonly);
-    wrap->Wrap(info.This());
-    info.GetReturnValue().Set(info.This());
+    wrap->db_ = new Database(ADDON_UTF8_VALUE(path), readonly);
+    wrap->Wrap(ADDON_THIS());
+    ADDON_RETURN(ADDON_THIS());
   } catch (const std::exception& e) {
-    Nan::ThrowError(e.what());
+    ADDON_THROW_ERROR(e.what());
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(DatabaseWrap::Exec) {
-  DatabaseWrap* wrap = Nan::ObjectWrap::Unwrap<DatabaseWrap>(info.Holder());
+ADDON_METHOD(DatabaseWrap::Exec) {
+  ADDON_ENV;
+  DatabaseWrap* wrap = ADDON_UNWRAP(DatabaseWrap, ADDON_HOLDER());
 
   if (!wrap->db_ || !wrap->db_->isOpen()) {
-    Nan::ThrowError("Database is closed");
-    return;
+    ADDON_THROW_ERROR("Database is closed");
+    ADDON_VOID_RETURN();
   }
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("SQL must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("SQL must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String sql(info[0]);
+  ADDON_UTF8(sql, ADDON_ARG(0));
 
   try {
-    wrap->db_->exec(*sql);
-    info.GetReturnValue().Set(info.Holder());
+    wrap->db_->exec(ADDON_UTF8_VALUE(sql));
+    ADDON_RETURN(ADDON_HOLDER());
   } catch (const std::exception& e) {
-    Nan::ThrowError(e.what());
+    ADDON_THROW_ERROR(e.what());
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(DatabaseWrap::Prepare) {
-  DatabaseWrap* wrap = Nan::ObjectWrap::Unwrap<DatabaseWrap>(info.Holder());
+ADDON_METHOD(DatabaseWrap::Prepare) {
+  ADDON_ENV;
+  DatabaseWrap* wrap = ADDON_UNWRAP(DatabaseWrap, ADDON_HOLDER());
 
   if (!wrap->db_ || !wrap->db_->isOpen()) {
-    Nan::ThrowError("Database is closed");
-    return;
+    ADDON_THROW_ERROR("Database is closed");
+    ADDON_VOID_RETURN();
   }
 
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("SQL must be a string");
-    return;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("SQL must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String sql(info[0]);
+  ADDON_UTF8(sql, ADDON_ARG(0));
 
   try {
-    Statement* stmt = new Statement(wrap->db_, *sql);
-    Local<Object> stmtObj = StatementWrap::Create(stmt);
-    info.GetReturnValue().Set(stmtObj);
+    Statement* stmt = new Statement(wrap->db_, ADDON_UTF8_VALUE(sql));
+    ADDON_OBJECT_TYPE stmtObj = StatementWrap::Create(stmt);
+    ADDON_RETURN(stmtObj);
   } catch (const std::exception& e) {
-    Nan::ThrowError(e.what());
+    ADDON_THROW_ERROR(e.what());
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(DatabaseWrap::Close) {
-  DatabaseWrap* wrap = Nan::ObjectWrap::Unwrap<DatabaseWrap>(info.Holder());
+ADDON_METHOD(DatabaseWrap::Close) {
+  ADDON_ENV;
+  DatabaseWrap* wrap = ADDON_UNWRAP(DatabaseWrap, ADDON_HOLDER());
 
   if (wrap->db_) {
     wrap->db_->close();
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_GETTER(DatabaseWrap::GetOpen) {
-  DatabaseWrap* wrap = Nan::ObjectWrap::Unwrap<DatabaseWrap>(info.Holder());
+ADDON_GETTER(DatabaseWrap::GetOpen) {
+  ADDON_ENV;
+  DatabaseWrap* wrap = ADDON_UNWRAP(DatabaseWrap, ADDON_HOLDER());
   bool isOpen = wrap->db_ && wrap->db_->isOpen();
-  info.GetReturnValue().Set(Nan::New<Boolean>(isOpen));
+  ADDON_RETURN(ADDON_BOOLEAN(isOpen));
 }
 
-NAN_GETTER(DatabaseWrap::GetPath) {
-  DatabaseWrap* wrap = Nan::ObjectWrap::Unwrap<DatabaseWrap>(info.Holder());
+ADDON_GETTER(DatabaseWrap::GetPath) {
+  ADDON_ENV;
+  DatabaseWrap* wrap = ADDON_UNWRAP(DatabaseWrap, ADDON_HOLDER());
   if (wrap->db_) {
-    info.GetReturnValue().Set(
-      Nan::New<String>(wrap->db_->path().c_str()).ToLocalChecked());
-  } else {
-    info.GetReturnValue().Set(Nan::Null());
+    ADDON_RETURN(ADDON_STRING(wrap->db_->path().c_str()));
   }
+  ADDON_RETURN_NULL();
 }
 
-NAN_GETTER(DatabaseWrap::GetInTransaction) {
-  DatabaseWrap* wrap = Nan::ObjectWrap::Unwrap<DatabaseWrap>(info.Holder());
+ADDON_GETTER(DatabaseWrap::GetInTransaction) {
+  ADDON_ENV;
+  DatabaseWrap* wrap = ADDON_UNWRAP(DatabaseWrap, ADDON_HOLDER());
   bool inTx = wrap->db_ && wrap->db_->inTransaction();
-  info.GetReturnValue().Set(Nan::New<Boolean>(inTx));
+  ADDON_RETURN(ADDON_BOOLEAN(inTx));
 }
 
 // ============================================
 // Statement Implementation
 // ============================================
 
-void StatementWrap::Init(Local<Object> exports) {
-  Nan::HandleScope scope;
+void StatementWrap::Init(ADDON_INIT_PARAMS) {
+  ADDON_HANDLE_SCOPE();
 
-  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>();
-  tpl->SetClassName(Nan::New("Statement").ToLocalChecked());
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+  auto tpl = ADDON_NEW_CTOR_TEMPLATE();
+  ADDON_SET_CLASS_NAME(tpl, "Statement");
+  ADDON_SET_INTERNAL_FIELD_COUNT(tpl, 1);
 
-  Nan::SetPrototypeMethod(tpl, "run", Run);
-  Nan::SetPrototypeMethod(tpl, "get", Get);
-  Nan::SetPrototypeMethod(tpl, "all", All);
-  Nan::SetPrototypeMethod(tpl, "reset", Reset);
-  Nan::SetPrototypeMethod(tpl, "finalize", Finalize);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "run", Run);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "get", Get);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "all", All);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "reset", Reset);
+  ADDON_SET_PROTOTYPE_METHOD(tpl, "finalize", Finalize);
 
-  Nan::SetAccessor(tpl->InstanceTemplate(),
-    Nan::New("source").ToLocalChecked(), GetSource);
-  Nan::SetAccessor(tpl->InstanceTemplate(),
-    Nan::New("reader").ToLocalChecked(), GetReader);
+  ADDON_SET_ACCESSOR(tpl, "source", GetSource);
+  ADDON_SET_ACCESSOR(tpl, "reader", GetReader);
 
-  constructorTemplate.Reset(tpl);
-  constructor.Reset(tpl->GetFunction());
+  ADDON_PERSISTENT_RESET(constructorTemplate, tpl);
+  ADDON_PERSISTENT_RESET(constructor, ADDON_GET_CTOR_FUNCTION(tpl));
 }
 
-Local<Object> StatementWrap::Create(Statement* stmt) {
-  Nan::EscapableHandleScope scope;
+ADDON_OBJECT_TYPE StatementWrap::Create(Statement* stmt) {
+  ADDON_ESCAPABLE_SCOPE();
 
-  Local<Function> cons = Nan::New(constructor);
-  Local<Object> instance = Nan::NewInstance(cons).ToLocalChecked();
+  auto cons = ADDON_PERSISTENT_GET(constructor);
+  ADDON_OBJECT_TYPE instance = ADDON_NEW_INSTANCE(cons);
 
   StatementWrap* wrap = new StatementWrap();
   wrap->stmt_ = stmt;
   wrap->Wrap(instance);
 
-  return scope.Escape(instance);
+  return ADDON_ESCAPE(instance);
 }
 
-void StatementWrap::bindValue(Statement* stmt, int index, Local<Value> val) {
-  if (val->IsNull() || val->IsUndefined()) {
+void StatementWrap::bindValue(Statement* stmt, int index, ADDON_VALUE val) {
+  if (ADDON_IS_NULL(val) || ADDON_IS_UNDEFINED(val)) {
     stmt->bindNull(index);
   }
-  else if (val->IsBoolean()) {
-    stmt->bindInt(index, val->BooleanValue() ? 1 : 0);
+  else if (ADDON_IS_BOOLEAN(val)) {
+    stmt->bindInt(index, ADDON_BOOL_VALUE(val) ? 1 : 0);
   }
-  else if (val->IsInt32()) {
-    stmt->bindInt(index, Nan::To<int32_t>(val).FromJust());
+  else if (ADDON_IS_INT32(val)) {
+    stmt->bindInt(index, ADDON_TO_INT32(val));
   }
-  else if (val->IsNumber()) {
-    double num = Nan::To<double>(val).FromJust();
+  else if (ADDON_IS_NUMBER(val)) {
+    double num = ADDON_TO_DOUBLE(val);
     // Check if it's an integer that fits in int64
     if (num == static_cast<double>(static_cast<int64_t>(num))) {
       stmt->bindInt64(index, static_cast<int64_t>(num));
@@ -268,70 +271,69 @@ void StatementWrap::bindValue(Statement* stmt, int index, Local<Value> val) {
       stmt->bindDouble(index, num);
     }
   }
-  else if (val->IsString()) {
-    Nan::Utf8String str(val);
-    stmt->bindText(index, *str);
+  else if (ADDON_IS_STRING(val)) {
+    ADDON_UTF8(str, val);
+    stmt->bindText(index, ADDON_UTF8_VALUE(str));
   }
-  else if (node::Buffer::HasInstance(val)) {
-    Local<Object> buf = val.As<Object>();
-    stmt->bindBlob(index, node::Buffer::Data(buf), node::Buffer::Length(buf));
+  else if (ADDON_BUFFER_IS(val)) {
+    ADDON_OBJECT_TYPE buf = ADDON_AS_OBJECT(val);
+    stmt->bindBlob(index, ADDON_BUFFER_DATA(buf), ADDON_BUFFER_LENGTH(buf));
   }
   else {
     stmt->bindNull(index);
   }
 }
 
-Local<Object> StatementWrap::rowToObject(Statement* stmt) {
-  Nan::EscapableHandleScope scope;
+ADDON_OBJECT_TYPE StatementWrap::rowToObject(Statement* stmt) {
+  ADDON_ESCAPABLE_SCOPE();
 
-  Local<Object> row = Nan::New<Object>();
+  ADDON_OBJECT_TYPE row = ADDON_OBJECT();
   int colCount = stmt->columnCount();
 
   for (int i = 0; i < colCount; i++) {
     std::string name = stmt->columnName(i);
-    Local<String> key = Nan::New<String>(name.c_str()).ToLocalChecked();
-
     int type = stmt->columnType(i);
-    Local<Value> value;
+    ADDON_VALUE value;
 
     switch (type) {
       case SQLITE_INTEGER:
-        value = Nan::New<Number>(static_cast<double>(stmt->getInt64(i)));
+        value = ADDON_NUMBER(stmt->getInt64(i));
         break;
 
       case SQLITE_FLOAT:
-        value = Nan::New<Number>(stmt->getDouble(i));
+        value = ADDON_NUMBER(stmt->getDouble(i));
         break;
 
       case SQLITE_TEXT:
-        value = Nan::New<String>(stmt->getText(i).c_str()).ToLocalChecked();
+        value = ADDON_STRING(stmt->getText(i).c_str());
         break;
 
       case SQLITE_BLOB: {
         int size;
         const void* data = stmt->getBlob(i, &size);
-        value = Nan::CopyBuffer(static_cast<const char*>(data), size).ToLocalChecked();
+        value = ADDON_COPY_BUFFER(static_cast<const char*>(data), size);
         break;
       }
 
       case SQLITE_NULL:
       default:
-        value = Nan::Null();
+        value = ADDON_NULL();
         break;
     }
 
-    row->Set(key, value);
+    ADDON_SET(row, name.c_str(), value);
   }
 
-  return scope.Escape(row);
+  return ADDON_ESCAPE(row);
 }
 
-NAN_METHOD(StatementWrap::Run) {
-  StatementWrap* wrap = Nan::ObjectWrap::Unwrap<StatementWrap>(info.Holder());
+ADDON_METHOD(StatementWrap::Run) {
+  ADDON_ENV;
+  StatementWrap* wrap = ADDON_UNWRAP(StatementWrap, ADDON_HOLDER());
 
   if (!wrap->stmt_ || !wrap->stmt_->isValid()) {
-    Nan::ThrowError("Statement has been finalized");
-    return;
+    ADDON_THROW_ERROR("Statement has been finalized");
+    ADDON_VOID_RETURN();
   }
 
   try {
@@ -339,32 +341,33 @@ NAN_METHOD(StatementWrap::Run) {
     wrap->stmt_->clearBindings();
 
     // Bind parameters
-    for (int i = 0; i < info.Length(); i++) {
-      bindValue(wrap->stmt_, i + 1, info[i]);
+    for (int i = 0; i < ADDON_ARG_COUNT(); i++) {
+      bindValue(wrap->stmt_, i + 1, ADDON_ARG(i));
     }
 
     // Execute
     wrap->stmt_->step();
 
     // Return result object
-    Local<Object> result = Nan::New<Object>();
-    result->Set(Nan::New("changes").ToLocalChecked(),
-                Nan::New<Integer>(wrap->stmt_->changes()));
-    result->Set(Nan::New("lastInsertRowid").ToLocalChecked(),
-                Nan::New<Number>(static_cast<double>(wrap->stmt_->lastInsertRowid())));
+    ADDON_OBJECT_TYPE result = ADDON_OBJECT();
+    ADDON_SET(result, "changes", ADDON_INTEGER(wrap->stmt_->changes()));
+    ADDON_SET(result, "lastInsertRowid",
+              ADDON_NUMBER(wrap->stmt_->lastInsertRowid()));
 
-    info.GetReturnValue().Set(result);
+    ADDON_RETURN(result);
   } catch (const std::exception& e) {
-    Nan::ThrowError(e.what());
+    ADDON_THROW_ERROR(e.what());
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(StatementWrap::Get) {
-  StatementWrap* wrap = Nan::ObjectWrap::Unwrap<StatementWrap>(info.Holder());
+ADDON_METHOD(StatementWrap::Get) {
+  ADDON_ENV;
+  StatementWrap* wrap = ADDON_UNWRAP(StatementWrap, ADDON_HOLDER());
 
   if (!wrap->stmt_ || !wrap->stmt_->isValid()) {
-    Nan::ThrowError("Statement has been finalized");
-    return;
+    ADDON_THROW_ERROR("Statement has been finalized");
+    ADDON_VOID_RETURN();
   }
 
   try {
@@ -372,27 +375,28 @@ NAN_METHOD(StatementWrap::Get) {
     wrap->stmt_->clearBindings();
 
     // Bind parameters
-    for (int i = 0; i < info.Length(); i++) {
-      bindValue(wrap->stmt_, i + 1, info[i]);
+    for (int i = 0; i < ADDON_ARG_COUNT(); i++) {
+      bindValue(wrap->stmt_, i + 1, ADDON_ARG(i));
     }
 
     // Get first row
     if (wrap->stmt_->step()) {
-      info.GetReturnValue().Set(rowToObject(wrap->stmt_));
-    } else {
-      info.GetReturnValue().Set(Nan::Undefined());
+      ADDON_RETURN(rowToObject(wrap->stmt_));
     }
+    ADDON_RETURN_UNDEFINED();
   } catch (const std::exception& e) {
-    Nan::ThrowError(e.what());
+    ADDON_THROW_ERROR(e.what());
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(StatementWrap::All) {
-  StatementWrap* wrap = Nan::ObjectWrap::Unwrap<StatementWrap>(info.Holder());
+ADDON_METHOD(StatementWrap::All) {
+  ADDON_ENV;
+  StatementWrap* wrap = ADDON_UNWRAP(StatementWrap, ADDON_HOLDER());
 
   if (!wrap->stmt_ || !wrap->stmt_->isValid()) {
-    Nan::ThrowError("Statement has been finalized");
-    return;
+    ADDON_THROW_ERROR("Statement has been finalized");
+    ADDON_VOID_RETURN();
   }
 
   try {
@@ -400,67 +404,72 @@ NAN_METHOD(StatementWrap::All) {
     wrap->stmt_->clearBindings();
 
     // Bind parameters
-    for (int i = 0; i < info.Length(); i++) {
-      bindValue(wrap->stmt_, i + 1, info[i]);
+    for (int i = 0; i < ADDON_ARG_COUNT(); i++) {
+      bindValue(wrap->stmt_, i + 1, ADDON_ARG(i));
     }
 
     // Get all rows
-    Local<Array> rows = Nan::New<Array>();
+    ADDON_ARRAY_TYPE rows = ADDON_ARRAY_EMPTY();
     uint32_t index = 0;
 
     while (wrap->stmt_->step()) {
-      rows->Set(index++, rowToObject(wrap->stmt_));
+      ADDON_SET_INDEX(rows, index++, rowToObject(wrap->stmt_));
     }
 
-    info.GetReturnValue().Set(rows);
+    ADDON_RETURN(rows);
   } catch (const std::exception& e) {
-    Nan::ThrowError(e.what());
+    ADDON_THROW_ERROR(e.what());
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(StatementWrap::Reset) {
-  StatementWrap* wrap = Nan::ObjectWrap::Unwrap<StatementWrap>(info.Holder());
+ADDON_METHOD(StatementWrap::Reset) {
+  ADDON_ENV;
+  StatementWrap* wrap = ADDON_UNWRAP(StatementWrap, ADDON_HOLDER());
 
   if (wrap->stmt_ && wrap->stmt_->isValid()) {
     wrap->stmt_->reset();
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_METHOD(StatementWrap::Finalize) {
-  StatementWrap* wrap = Nan::ObjectWrap::Unwrap<StatementWrap>(info.Holder());
+ADDON_METHOD(StatementWrap::Finalize) {
+  ADDON_ENV;
+  StatementWrap* wrap = ADDON_UNWRAP(StatementWrap, ADDON_HOLDER());
 
   if (wrap->stmt_) {
     wrap->stmt_->finalize();
   }
+  ADDON_VOID_RETURN();
 }
 
-NAN_GETTER(StatementWrap::GetSource) {
-  StatementWrap* wrap = Nan::ObjectWrap::Unwrap<StatementWrap>(info.Holder());
+ADDON_GETTER(StatementWrap::GetSource) {
+  ADDON_ENV;
+  StatementWrap* wrap = ADDON_UNWRAP(StatementWrap, ADDON_HOLDER());
 
   if (wrap->stmt_) {
-    info.GetReturnValue().Set(
-      Nan::New<String>(wrap->stmt_->source().c_str()).ToLocalChecked());
-  } else {
-    info.GetReturnValue().Set(Nan::Null());
+    ADDON_RETURN(ADDON_STRING(wrap->stmt_->source().c_str()));
   }
+  ADDON_RETURN_NULL();
 }
 
-NAN_GETTER(StatementWrap::GetReader) {
-  StatementWrap* wrap = Nan::ObjectWrap::Unwrap<StatementWrap>(info.Holder());
+ADDON_GETTER(StatementWrap::GetReader) {
+  ADDON_ENV;
+  StatementWrap* wrap = ADDON_UNWRAP(StatementWrap, ADDON_HOLDER());
 
   bool isReader = wrap->stmt_ && wrap->stmt_->isReader();
-  info.GetReturnValue().Set(Nan::New<Boolean>(isReader));
+  ADDON_RETURN(ADDON_BOOLEAN(isReader));
 }
 
 // ============================================
 // Module Initialization
 // ============================================
 
-void InitSQLite3(Local<Object> exports) {
-  Local<Object> sqlite3 = Nan::New<Object>();
+void InitSQLite3(ADDON_INIT_PARAMS) {
+  ADDON_OBJECT_TYPE sqlite3 = ADDON_OBJECT();
 
   DatabaseWrap::Init(sqlite3);
   StatementWrap::Init(sqlite3);
 
-  exports->Set(Nan::New("sqlite3").ToLocalChecked(), sqlite3);
+  ADDON_SET(exports, "sqlite3", sqlite3);
 }

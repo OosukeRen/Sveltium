@@ -122,7 +122,7 @@ private:
 size_t getTypeSize(ArgType type);
 
 /**
- * Get stack slots needed for type (4 bytes per slot on x86)
+ * Get stack slots needed for type (register-width per slot)
  */
 size_t getTypeSlots(ArgType type);
 

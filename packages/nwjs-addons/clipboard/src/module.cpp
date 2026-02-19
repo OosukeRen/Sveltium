@@ -1,10 +1,10 @@
-#include <nan.h>
+#include "addon_api.h"
 #include "clipboard.h"
 
-using namespace v8;
 using namespace clipboard;
 
-NAN_METHOD(GetType) {
+ADDON_METHOD(GetType) {
+  ADDON_ENV;
   ClipboardType type = getType();
 
   const char* typeStr;
@@ -16,187 +16,171 @@ NAN_METHOD(GetType) {
     default:                typeStr = "unknown"; break;
   }
 
-  info.GetReturnValue().Set(Nan::New(typeStr).ToLocalChecked());
+  ADDON_RETURN(ADDON_STRING(typeStr));
 }
 
-NAN_METHOD(HasText) {
-  info.GetReturnValue().Set(Nan::New(hasText()));
+ADDON_METHOD(HasText) {
+  ADDON_ENV;
+  ADDON_RETURN(ADDON_BOOL(hasText()));
 }
 
-NAN_METHOD(HasFiles) {
-  info.GetReturnValue().Set(Nan::New(hasFiles()));
+ADDON_METHOD(HasFiles) {
+  ADDON_ENV;
+  ADDON_RETURN(ADDON_BOOL(hasFiles()));
 }
 
-NAN_METHOD(HasImage) {
-  info.GetReturnValue().Set(Nan::New(hasImage()));
+ADDON_METHOD(HasImage) {
+  ADDON_ENV;
+  ADDON_RETURN(ADDON_BOOL(hasImage()));
 }
 
-NAN_METHOD(GetText) {
+ADDON_METHOD(GetText) {
+  ADDON_ENV;
   std::string text = getText();
   if (text.empty()) {
-    info.GetReturnValue().SetNull();
-  } else {
-    info.GetReturnValue().Set(Nan::New(text).ToLocalChecked());
+    ADDON_RETURN_NULL();
   }
+  ADDON_RETURN(ADDON_STRING(text));
 }
 
-NAN_METHOD(CopyText) {
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Argument must be a string");
-    return;
+ADDON_METHOD(CopyText) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a string");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String text(info[0]);
-  bool success = copyText(std::string(*text));
-  info.GetReturnValue().Set(Nan::New(success));
+  ADDON_UTF8(text, ADDON_ARG(0));
+  bool success = copyText(std::string(ADDON_UTF8_VALUE(text)));
+  ADDON_RETURN(ADDON_BOOL(success));
 }
 
-NAN_METHOD(GetFiles) {
+ADDON_METHOD(GetFiles) {
+  ADDON_ENV;
   std::vector<std::string> files = getFiles();
 
-  Local<Array> result = Nan::New<Array>(static_cast<uint32_t>(files.size()));
+  ADDON_ARRAY_TYPE result = ADDON_ARRAY(files.size());
 
   for (size_t i = 0; i < files.size(); i++) {
-    Nan::Set(result, static_cast<uint32_t>(i), Nan::New(files[i]).ToLocalChecked());
+    ADDON_SET_INDEX(result, i, ADDON_STRING(files[i]));
   }
 
-  info.GetReturnValue().Set(result);
+  ADDON_RETURN(result);
 }
 
-NAN_METHOD(CopyFiles) {
-  if (info.Length() < 1 || !info[0]->IsArray()) {
-    Nan::ThrowTypeError("Argument must be an array of strings");
-    return;
+ADDON_METHOD(CopyFiles) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_ARRAY(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be an array of strings");
+    ADDON_VOID_RETURN();
   }
 
-  Local<Array> arr = Local<Array>::Cast(info[0]);
+  ADDON_ARRAY_TYPE arr = ADDON_CAST_ARRAY(ADDON_ARG(0));
   std::vector<std::string> paths;
 
-  for (uint32_t i = 0; i < arr->Length(); i++) {
-    Local<Value> val = Nan::Get(arr, i).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      paths.push_back(std::string(*str));
+  for (uint32_t i = 0; i < ADDON_LENGTH(arr); i++) {
+    ADDON_VALUE val = ADDON_GET_INDEX(arr, i);
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      paths.push_back(std::string(ADDON_UTF8_VALUE(str)));
     }
   }
 
   bool success = copyFiles(paths);
-  info.GetReturnValue().Set(Nan::New(success));
+  ADDON_RETURN(ADDON_BOOL(success));
 }
 
-NAN_METHOD(CutFiles) {
-  if (info.Length() < 1 || !info[0]->IsArray()) {
-    Nan::ThrowTypeError("Argument must be an array of strings");
-    return;
+ADDON_METHOD(CutFiles) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_ARRAY(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be an array of strings");
+    ADDON_VOID_RETURN();
   }
 
-  Local<Array> arr = Local<Array>::Cast(info[0]);
+  ADDON_ARRAY_TYPE arr = ADDON_CAST_ARRAY(ADDON_ARG(0));
   std::vector<std::string> paths;
 
-  for (uint32_t i = 0; i < arr->Length(); i++) {
-    Local<Value> val = Nan::Get(arr, i).ToLocalChecked();
-    if (val->IsString()) {
-      Nan::Utf8String str(val);
-      paths.push_back(std::string(*str));
+  for (uint32_t i = 0; i < ADDON_LENGTH(arr); i++) {
+    ADDON_VALUE val = ADDON_GET_INDEX(arr, i);
+    if (ADDON_IS_STRING(val)) {
+      ADDON_UTF8(str, val);
+      paths.push_back(std::string(ADDON_UTF8_VALUE(str)));
     }
   }
 
   bool success = cutFiles(paths);
-  info.GetReturnValue().Set(Nan::New(success));
+  ADDON_RETURN(ADDON_BOOL(success));
 }
 
-NAN_METHOD(PasteFiles) {
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Argument must be a string (destination directory)");
-    return;
+ADDON_METHOD(PasteFiles) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a string (destination directory)");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String destDir(info[0]);
-  std::vector<std::string> newPaths = pasteFiles(std::string(*destDir));
+  ADDON_UTF8(destDir, ADDON_ARG(0));
+  std::vector<std::string> newPaths = pasteFiles(std::string(ADDON_UTF8_VALUE(destDir)));
 
-  Local<Array> result = Nan::New<Array>(static_cast<uint32_t>(newPaths.size()));
+  ADDON_ARRAY_TYPE result = ADDON_ARRAY(newPaths.size());
 
   for (size_t i = 0; i < newPaths.size(); i++) {
-    Nan::Set(result, static_cast<uint32_t>(i), Nan::New(newPaths[i]).ToLocalChecked());
+    ADDON_SET_INDEX(result, i, ADDON_STRING(newPaths[i]));
   }
 
-  info.GetReturnValue().Set(result);
+  ADDON_RETURN(result);
 }
 
-NAN_METHOD(IsCutOperation) {
-  info.GetReturnValue().Set(Nan::New(isCutOperation()));
+ADDON_METHOD(IsCutOperation) {
+  ADDON_ENV;
+  ADDON_RETURN(ADDON_BOOL(isCutOperation()));
 }
 
-NAN_METHOD(GetImageSize) {
+ADDON_METHOD(GetImageSize) {
+  ADDON_ENV;
   int width = 0;
   int height = 0;
 
   if (getImageSize(width, height)) {
-    Local<Object> result = Nan::New<Object>();
-    Nan::Set(result, Nan::New("width").ToLocalChecked(), Nan::New(width));
-    Nan::Set(result, Nan::New("height").ToLocalChecked(), Nan::New(height));
-    info.GetReturnValue().Set(result);
-  } else {
-    info.GetReturnValue().SetNull();
+    ADDON_OBJECT_TYPE result = ADDON_OBJECT();
+    ADDON_SET(result, "width", ADDON_INT(width));
+    ADDON_SET(result, "height", ADDON_INT(height));
+    ADDON_RETURN(result);
   }
+  ADDON_RETURN_NULL();
 }
 
-NAN_METHOD(SaveImageToFile) {
-  if (info.Length() < 1 || !info[0]->IsString()) {
-    Nan::ThrowTypeError("Argument must be a string (file path)");
-    return;
+ADDON_METHOD(SaveImageToFile) {
+  ADDON_ENV;
+  if (ADDON_ARG_COUNT() < 1 || !ADDON_IS_STRING(ADDON_ARG(0))) {
+    ADDON_THROW_TYPE_ERROR("Argument must be a string (file path)");
+    ADDON_VOID_RETURN();
   }
 
-  Nan::Utf8String filePath(info[0]);
-  bool success = saveImageToFile(std::string(*filePath));
-  info.GetReturnValue().Set(Nan::New(success));
+  ADDON_UTF8(filePath, ADDON_ARG(0));
+  bool success = saveImageToFile(std::string(ADDON_UTF8_VALUE(filePath)));
+  ADDON_RETURN(ADDON_BOOL(success));
 }
 
-NAN_METHOD(Clear) {
+ADDON_METHOD(Clear) {
+  ADDON_ENV;
   bool success = clear();
-  info.GetReturnValue().Set(Nan::New(success));
+  ADDON_RETURN(ADDON_BOOL(success));
 }
 
-void InitClipboard(Local<Object> exports) {
-  Nan::Set(exports, Nan::New("clipboardGetType").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(GetType)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardHasText").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(HasText)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardHasFiles").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(HasFiles)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardHasImage").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(HasImage)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardGetText").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(GetText)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardCopyText").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(CopyText)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardGetFiles").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(GetFiles)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardCopyFiles").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(CopyFiles)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardCutFiles").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(CutFiles)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardPasteFiles").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(PasteFiles)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardIsCutOperation").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(IsCutOperation)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardGetImageSize").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(GetImageSize)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardSaveImageToFile").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(SaveImageToFile)).ToLocalChecked());
-
-  Nan::Set(exports, Nan::New("clipboardClear").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(Clear)).ToLocalChecked());
+void InitClipboard(ADDON_INIT_PARAMS) {
+  ADDON_EXPORT_FUNCTION(exports, "clipboardGetType", GetType);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardHasText", HasText);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardHasFiles", HasFiles);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardHasImage", HasImage);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardGetText", GetText);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardCopyText", CopyText);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardGetFiles", GetFiles);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardCopyFiles", CopyFiles);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardCutFiles", CutFiles);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardPasteFiles", PasteFiles);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardIsCutOperation", IsCutOperation);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardGetImageSize", GetImageSize);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardSaveImageToFile", SaveImageToFile);
+  ADDON_EXPORT_FUNCTION(exports, "clipboardClear", Clear);
 }

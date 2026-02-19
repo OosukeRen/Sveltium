@@ -14,7 +14,11 @@ var native = null
 var loadError = null
 
 try {
-  native = require('../build/Release/nwjs_addons.node').tinycc
+  var addon = require('../build/Release/nwjs_addons.node')
+  native = addon.tinycc || null
+  if (!native) {
+    loadError = new Error('tinycc module not found in native addon')
+  }
 } catch (err) {
   loadError = err
 }
